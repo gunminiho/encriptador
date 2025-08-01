@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadora IL Uniswap V3</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+      max-width: 500px;
+      width: 100%;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+    }
+    input {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.2rem;
+    }
+    button {
+      margin-top: 1.5rem;
+      padding: 0.8rem;
+      width: 100%;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .result {
+      margin-top: 1.5rem;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>💸 Impermanent Loss V3</h1>
+    
+    <label>💰 Inversión total (USD)</label>
+    <input type="number" id="investment" placeholder="Ej: 1000" min="0">
+
+    <label>🔢 Precio inicial (Token A / Token B)</label>
+    <input type="number" id="initialPrice" placeholder="Ej: 1000" min="0">
+
+    <label>📈 Precio actual</label>
+    <input type="number" id="currentPrice" placeholder="Ej: 1500" min="0">
+
+    <label>📉 Precio mínimo del rango</label>
+    <input type="number" id="minPrice" placeholder="Ej: 800" min="0">
+
+    <label>📈 Precio máximo del rango</label>
+    <input type="number" id="maxPrice" placeholder="Ej: 2000" min="0">
+
+    <button onclick="calcularIL()">Calcular IL</button>
+
+    <div class="result" id="resultado"></div>
+  </div>
+
+  <script>
+    function calcularIL() {
+      const investment = parseFloat(document.getElementById("investment").value);
+      const P0 = parseFloat(document.getElementById("initialPrice").value);
+      const P = parseFloat(document.getElementById("currentPrice").value);
+      const Pmin = parseFloat(document.getElementById("minPrice").value);
+      const Pmax = parseFloat(document.getElementById("maxPrice").value);
+      const res = document.getElementById("resultado");
+
+      if (!investment || !P || !P0 || !Pmin || !Pmax || Pmin >= Pmax || P < 0 || P0 <= 0) {
+        res.innerHTML = "❌ Revisa los valores ingresados.";
+        return;
+      }
+
+      let valorLP = 0;
+      let valorHold = investment * (P / P0);
+
+      // Si precio está fuera del rango
+      if (P <= Pmin) {
+        valorLP = investment * Math.sqrt(Pmin / P0);
+      } else if (P >= Pmax) {
+        valorLP = investment * Math.sqrt(P0 / Pmax);
+      } else {
+        // Dentro del rango
+        const sqrtP = Math.sqrt(P);
+        const sqrtPmin = Math.sqrt(Pmin);
+        const sqrtPmax = Math.sqrt(Pmax);
+
+        const L = investment / ((sqrtPmax - sqrtPmin) * P0); // Simplified liquidity
+        const amountToken0 = L * (sqrtPmax - sqrtP);
+        const amountToken1 = L * (sqrtP - sqrtPmin);
+
+        valorLP = (amountToken0 * P) + amountToken1;
+      }
+
+      const il = (valorLP - valorHold) / valorHold * 100;
+
+      res.innerHTML = `
+        🔍 Valor LP: $${valorLP.toFixed(2)}<br>
+        💼 Valor HODL: $${valorHold.toFixed(2)}<br>
+        📉 Impermanent Loss: <span style="color:red">${il.toFixed(2)}%</span>
+      `;
+    }
+  </script>
+</body>
+</html>

@@ -69,6 +69,10 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    tenants: Tenant;
+    encryption_operations: EncryptionOperation;
+    resource_usage_daily: ResourceUsageDaily;
+    error_logs: ErrorLog;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
@@ -77,12 +81,16 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    tenants: TenantsSelect<false> | TenantsSelect<true>;
+    encryption_operations: EncryptionOperationsSelect<false> | EncryptionOperationsSelect<true>;
+    resource_usage_daily: ResourceUsageDailySelect<false> | ResourceUsageDailySelect<true>;
+    error_logs: ErrorLogsSelect<false> | ErrorLogsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
   };
   db: {
-    defaultIDType: number;
+    defaultIDType: string;
   };
   globals: {};
   globalsSelect: {};
@@ -118,7 +126,8 @@ export interface UserAuthOperations {
  * via the `definition` "users".
  */
 export interface User {
-  id: number;
+  id: string;
+  role?: ('admin' | 'user') | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -142,7 +151,7 @@ export interface User {
  * via the `definition` "media".
  */
 export interface Media {
-  id: number;
+  id: string;
   alt: string;
   updatedAt: string;
   createdAt: string;
@@ -158,23 +167,160 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tenants".
+ */
+export interface Tenant {
+  id: string;
+  name: string;
+  email: string;
+  /**
+   * Tenant Status
+   */
+  state: boolean;
+  /**
+   * Api Key for Tentants
+   */
+  api_key: string;
+  /**
+   * Api Secret for Tentants
+   */
+  api_secret: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "encryption_operations".
+ */
+export interface EncryptionOperation {
+  id: string;
+  tenant_id: string | Tenant;
+  request_id: string;
+  operation_type: 'encrypt' | 'decrypt';
+  file_count: number;
+  total_size_bytes: number;
+  file_types?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  processing_time_ms: number;
+  is_password_provided: boolean;
+  /**
+   * Si el cliente proporciona la contraseña, esta se autogenera
+   */
+  password: string;
+  encryption_method: 'AES' | 'RSA';
+  success: boolean;
+  /**
+   * Metadata para el evento
+   */
+  metadata?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  operation_timestamp: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "resource_usage_daily".
+ */
+export interface ResourceUsageDaily {
+  id: string;
+  tenant_id: string | Tenant;
+  usage_date: string;
+  total_operations: number;
+  encrypt_operations: number;
+  decrypt_operations: number;
+  total_bytes_processed: number;
+  total_files_processed: number;
+  failed_operations: number;
+  avg_processing_time: number;
+  file_type_breakdown?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "error_logs".
+ */
+export interface ErrorLog {
+  id: string;
+  tenant_id: string | Tenant;
+  operation_id?: (string | null) | EncryptionOperation;
+  error_code?: string | null;
+  error_type?: string | null;
+  error_message: string;
+  stack_trace?: string | null;
+  context_data?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  level: 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
+  error_timestamp: string;
+  error_date: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
-  id: number;
+  id: string;
   document?:
     | ({
         relationTo: 'users';
-        value: number | User;
+        value: string | User;
       } | null)
     | ({
         relationTo: 'media';
-        value: number | Media;
+        value: string | Media;
+      } | null)
+    | ({
+        relationTo: 'tenants';
+        value: string | Tenant;
+      } | null)
+    | ({
+        relationTo: 'encryption_operations';
+        value: string | EncryptionOperation;
+      } | null)
+    | ({
+        relationTo: 'resource_usage_daily';
+        value: string | ResourceUsageDaily;
+      } | null)
+    | ({
+        relationTo: 'error_logs';
+        value: string | ErrorLog;
       } | null);
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
-    value: number | User;
+    value: string | User;
   };
   updatedAt: string;
   createdAt: string;
@@ -184,10 +330,10 @@ export interface PayloadLockedDocument {
  * via the `definition` "payload-preferences".
  */
 export interface PayloadPreference {
-  id: number;
+  id: string;
   user: {
     relationTo: 'users';
-    value: number | User;
+    value: string | User;
   };
   key?: string | null;
   value?:
@@ -207,7 +353,7 @@ export interface PayloadPreference {
  * via the `definition` "payload-migrations".
  */
 export interface PayloadMigration {
-  id: number;
+  id: string;
   name?: string | null;
   batch?: number | null;
   updatedAt: string;
@@ -218,6 +364,7 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  role?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -252,6 +399,76 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tenants_select".
+ */
+export interface TenantsSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  state?: T;
+  api_key?: T;
+  api_secret?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "encryption_operations_select".
+ */
+export interface EncryptionOperationsSelect<T extends boolean = true> {
+  tenant_id?: T;
+  request_id?: T;
+  operation_type?: T;
+  file_count?: T;
+  total_size_bytes?: T;
+  file_types?: T;
+  processing_time_ms?: T;
+  is_password_provided?: T;
+  password?: T;
+  encryption_method?: T;
+  success?: T;
+  metadata?: T;
+  operation_timestamp?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "resource_usage_daily_select".
+ */
+export interface ResourceUsageDailySelect<T extends boolean = true> {
+  tenant_id?: T;
+  usage_date?: T;
+  total_operations?: T;
+  encrypt_operations?: T;
+  decrypt_operations?: T;
+  total_bytes_processed?: T;
+  total_files_processed?: T;
+  failed_operations?: T;
+  avg_processing_time?: T;
+  file_type_breakdown?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "error_logs_select".
+ */
+export interface ErrorLogsSelect<T extends boolean = true> {
+  tenant_id?: T;
+  operation_id?: T;
+  error_code?: T;
+  error_type?: T;
+  error_message?: T;
+  stack_trace?: T;
+  context_data?: T;
+  level?: T;
+  error_timestamp?: T;
+  error_date?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

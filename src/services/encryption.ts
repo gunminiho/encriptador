@@ -1,0 +1,103 @@
+// src/services/encryption.ts
+import { randomBytes, pbkdf2Sync, createCipheriv } from 'crypto';
+import { words } from '@/utils/randomWords';
+
+export interface EncryptionResult {
+  /** El contenido cifrado (ciphertext + tag) en un Buffer */
+  cipherBuffer: Buffer;
+  /** La contraseña que se usó para derivar la clave (útil si se generó automáticamente) */
+  passwordUsed: string;
+  /** La sal usada para derivar la clave */
+  salt: Buffer;
+  /** El vector de inicialización (IV) usado por AES-GCM */
+  iv: Buffer;
+}
+
+export interface DeriveKeyParams {
+  /** Archivo o datos a cifrar, como Buffer */
+  fileBuffer: Buffer;
+  /**
+   * Contraseña proporcionada por el cliente.
+   * Si es undefined, se generará una contraseña "amigable" automáticamente.
+   */
+  password?: string;
+  /**
+   * Cadena adicional (por ejemplo, apiKey del tenant) para aportar entropía extra.
+   * Opcional: úsala si quieres combinar la API key con la contraseña auto generada.
+   */
+  apiKey?: string;
+}
+
+/**
+ * Genera una contraseña amigable de cuatro palabras. Puedes adaptar la lista a tus necesidades.
+ */
+function generateReadablePassword(): string {
+  // Seleccionamos cuatro palabras al azar y las unimos con guiones.
+  const selected = Array.from({ length: 3 }, () => {
+    const index = Math.floor(Math.random() * words.length);
+    return words[index];
+  });
+  return selected.join('-');
+}
+
+/**
+ * Deriva una clave de 256 bits (32 bytes) mediante PBKDF2 con SHA-512.
+ * Utiliza una sal aleatoria para evitar ataques de diccionario.
+ */
+function deriveKey(secret: string, salt: Buffer): Buffer {
+  const iterations = 100_000; // número de iteraciones; incrementa para mayor seguridad.
+  const keyLength = 32; // 32 bytes = 256 bits, suficiente para AES-256.
+  const digest = 'sha512'; // función hash utilizada por PBKDF2.
+  return pbkdf2Sync(secret, salt, iterations, keyLength, digest);
+}
+
+/**
+ * Cifra un Buffer usando AES-256-GCM. Devuelve un Buffer que contiene ciphertext y tag.
+ */
+function encryptWithAesGcm(plaintext: Buffer, key: Buffer, iv: Buffer): Buffer {
+  // Creamos un cifrador AES en modo GCM.
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  // Ciframos el contenido.
+  const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  // Obtenemos el tag de autenticación (16 bytes).
+  const tag = cipher.getAuthTag();
+  // Concatenamos ciphertext + tag para devolverlo como un único Buffer.
+  return Buffer.concat([encrypted, tag]);
+}
+
+/**
+ * Función principal que genera sal, contraseña (si falta), deriva la clave y cifra el archivo.
+ */
+export async function deriveKeyAndEncryptFile({
+  fileBuffer,
+  password,
+  apiKey,
+}: DeriveKeyParams): Promise<EncryptionResult> {
+  // 1. Generar un salt aleatorio de 16 bytes para PBKDF2.
+  const salt = randomBytes(16);
+
+  // 2. Obtener la contraseña a usar. Si el usuario no la proporcionó, generamos una.
+  const userPassword =
+    password && password.trim().length > 0 ? password : generateReadablePassword();
+
+  // 3. Combinar la contraseña con la apiKey (si se proporciona) para añadir entropía.
+  //    Esto es opcional; puedes omitir `apiKey` si no quieres mezclarla.
+  const secret = apiKey ? `${userPassword}-${apiKey}` : userPassword;
+
+  // 4. Derivar una clave de 256 bits (32 bytes) a partir del secreto y el salt.
+  const key = deriveKey(secret, salt);
+
+  // 5. Generar un vector de inicialización (IV) de 12 bytes, recomendado para AES-GCM.
+  const iv = randomBytes(12);
+
+  // 6. Cifrar el archivo. El resultado contiene ciphertext seguido del tag.
+  const cipherBuffer = encryptWithAesGcm(fileBuffer, key, iv);
+
+  // 7. Devolver todos los datos necesarios para descifrar más adelante.
+  return {
+    cipherBuffer,
+    passwordUsed: userPassword,
+    salt,
+    iv,
+  };
+}

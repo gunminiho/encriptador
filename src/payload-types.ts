@@ -64,6 +64,7 @@ export type SupportedTimezones =
 export interface Config {
   auth: {
     users: UserAuthOperations;
+    tenants: TenantAuthOperations;
   };
   blocks: {};
   collections: {
@@ -95,15 +96,37 @@ export interface Config {
   globals: {};
   globalsSelect: {};
   locale: null;
-  user: User & {
-    collection: 'users';
-  };
+  user:
+    | (User & {
+        collection: 'users';
+      })
+    | (Tenant & {
+        collection: 'tenants';
+      });
   jobs: {
     tasks: unknown;
     workflows: unknown;
   };
 }
 export interface UserAuthOperations {
+  forgotPassword: {
+    email: string;
+    password: string;
+  };
+  login: {
+    email: string;
+    password: string;
+  };
+  registerFirstUser: {
+    email: string;
+    password: string;
+  };
+  unlock: {
+    email: string;
+    password: string;
+  };
+}
+export interface TenantAuthOperations {
   forgotPassword: {
     email: string;
     password: string;
@@ -174,19 +197,14 @@ export interface Tenant {
   name: string;
   email: string;
   /**
-   * Tenant Status
+   * Tenant status
    */
   state: boolean;
-  /**
-   * Api Key for Tentants
-   */
-  api_key: string;
-  /**
-   * Api Secret for Tentants
-   */
-  api_secret: string;
   updatedAt: string;
   createdAt: string;
+  enableAPIKey?: boolean | null;
+  apiKey?: string | null;
+  apiKeyIndex?: string | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -318,10 +336,15 @@ export interface PayloadLockedDocument {
         value: string | ErrorLog;
       } | null);
   globalSlug?: string | null;
-  user: {
-    relationTo: 'users';
-    value: string | User;
-  };
+  user:
+    | {
+        relationTo: 'users';
+        value: string | User;
+      }
+    | {
+        relationTo: 'tenants';
+        value: string | Tenant;
+      };
   updatedAt: string;
   createdAt: string;
 }
@@ -331,10 +354,15 @@ export interface PayloadLockedDocument {
  */
 export interface PayloadPreference {
   id: string;
-  user: {
-    relationTo: 'users';
-    value: string | User;
-  };
+  user:
+    | {
+        relationTo: 'users';
+        value: string | User;
+      }
+    | {
+        relationTo: 'tenants';
+        value: string | Tenant;
+      };
   key?: string | null;
   value?:
     | {
@@ -408,10 +436,11 @@ export interface TenantsSelect<T extends boolean = true> {
   name?: T;
   email?: T;
   state?: T;
-  api_key?: T;
-  api_secret?: T;
   updatedAt?: T;
   createdAt?: T;
+  enableAPIKey?: T;
+  apiKey?: T;
+  apiKeyIndex?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

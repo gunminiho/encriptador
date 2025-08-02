@@ -1,12 +1,12 @@
 // src/collections/EncryptionOperations.ts
-import { CollectionConfig, PayloadHandler, PayloadRequest } from 'payload'
-import { v4 as uuidv4 } from 'uuid'
-import { generateRandomPassword } from '@/utils/crypto'
-import { Endpoint } from 'payload'
+import { CollectionConfig, PayloadRequest } from 'payload';
+import { v4 as uuidv4 } from 'uuid';
+import { generateRandomPassword } from '@/utils/crypto';
+import { response } from '@/utils/response';
+import { addDataAndFileToRequest } from 'payload';
+//import { deriveKeyAndEncryptFile } from '@/services/encryption';
 
-const metadata = { salt: 5, key2: '0xF2B40' }
-
-const encryptController: PayloadHandler = async (req: PayloadRequest) => {}
+const metadata = { salt: 5, key2: '0xF2B40' };
 
 export const EncryptionOperations: CollectionConfig = {
   slug: 'encryption_operations',
@@ -147,9 +147,65 @@ export const EncryptionOperations: CollectionConfig = {
   ],
   endpoints: [
     {
+      path: '/encrypt', // la ruta completa será /api/encryption_operations/encrypt
       method: 'post',
-      path: '/v1/encrypt',
-      handler: await encryptController,
+      handler: async (req: PayloadRequest): Promise<Response> => {
+        try {
+          const authHeader = req.headers.get('Authorization');
+          const isApiKey = typeof authHeader === 'string' && authHeader.includes('API-Key');
+          if (!isApiKey || !req.user)
+            return response(401, { error: 'Acceso no autorizado' }, 'Api Key invalida');
+          const tenant = req.user; // este es el ID del documento en 'tenants'
+          let cloned: Request | null = null;
+          let password: string | FormDataEntryValue | null = null;
+          let passwords: any = null;
+          let files: any = null;
+          const errors: Array<string> = [];
+          if (typeof req.clone === 'function') {
+            cloned = req.clone();
+            await addDataAndFileToRequest(req);
+            password = (await cloned.formData()).get('password');
+            if (Array.isArray(req.file) && req.file.length > 3)
+              files = req.file.filter((file) => file.name !== 'passwords.csv');
+            if (Array.isArray(req.file))
+              passwords = req.file.filter((file) => file.name === 'passwords.csv');
+            // console.log('---------');
+            // console.log('password:', password);
+            // console.log('files:', files.length);
+            // console.log('passwords:', passwords.length);
+            // console.log('---------');
+          }
+
+          // Validacion de datos del endopoint
+          if (Array.isArray(files) && files.length < 1)
+            errors.push('No se detectaron archivos para encriptar');
+          if (password && Array.isArray(files) && files.length < 1)
+            errors.push('No se detecto archivo para encriptar con esta contraseña');
+          if (!password && Array.isArray(files) && files.length === 1)
+            errors.push('No se detecto password para encriptar un solo archivo');
+          if (passwords && Array.isArray(files) && files.length === 1)
+            errors.push('Solo se detecto el archivo de configuración csv para encriptación masiva');
+          if (passwords && Array.isArray(files) && files.length === 2)
+            errors.push(
+              'Se detecto un solo archivo para encriptar y un archivo de configuración csv para encriptación masiva',
+            );
+          if (!passwords && Array.isArray(files) && files.length > 2)
+            errors.push('No se detecto archivo de passwords para encriptar varios archivos');
+          if(password && passwords)
+            errors.push('Se detecto password individual y archivo de configuración csv para encriptación masiva, elija cual usar');
+          if (errors.length > 0)
+            return response(400, errors, 'Error en los parámetros de la solicitud');
+
+          return response(200, { tenant: tenant }, 'tenant encontrado');
+        } catch (error: any) {
+          console.error(error);
+          return response(
+            500,
+            { error: `'Error interno del servidor: ${error.message}` },
+            'Error interno',
+          );
+        }
+      },
     },
   ],
-}
+};

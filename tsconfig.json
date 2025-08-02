@@ -37,7 +37,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
-  ],
+, "src/services/encryption.ts.example"  ],
   "exclude": [
     "node_modules"
   ],

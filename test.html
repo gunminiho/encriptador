@@ -1,125 +1,184 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Calculadora IL Uniswap V3</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Encriptar / Desencriptar Archivos</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f4f8;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+    :root {
+      --primary: #4a90e2;
+      --secondary: #50e3c2;
+      --bg: #f5f7fa;
+      --card-bg: #ffffff;
+      --text: #333;
+      --radius: 8px;
+      --transition: 0.3s ease;
     }
-    .container {
-      background: white;
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       padding: 2rem;
-      border-radius: 12px;
-      box-shadow: 0 0 20px rgba(0,0,0,0.1);
-      max-width: 500px;
-      width: 100%;
     }
     h1 {
-      text-align: center;
-      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      color: var(--primary);
+    }
+    .container {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      width: 100%;
+      max-width: 900px;
+      justify-content: center;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      padding: 1.5rem;
+      flex: 1;
+      min-width: 280px;
+      transition: transform var(--transition);
+    }
+    .card:hover { transform: translateY(-4px); }
+    .card h2 {
+      margin-bottom: 1rem;
+      font-size: 1.25rem;
+      color: var(--secondary);
+    }
+    .field {
       margin-bottom: 1rem;
     }
     label {
       display: block;
-      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
     }
-    input {
+    input[type="file"],
+    input[type="password"] {
       width: 100%;
       padding: 0.5rem;
-      margin-top: 0.2rem;
+      border: 1px solid #ccc;
+      border-radius: var(--radius);
     }
     button {
-      margin-top: 1.5rem;
-      padding: 0.8rem;
       width: 100%;
-      background: #28a745;
-      color: white;
+      padding: 0.75rem;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius);
+      background: var(--primary);
+      color: white;
       font-size: 1rem;
       cursor: pointer;
+      transition: background var(--transition);
     }
-    .result {
-      margin-top: 1.5rem;
-      text-align: center;
-      font-weight: bold;
-      font-size: 1.1rem;
+    button:hover {
+      background: var(--secondary);
+    }
+    .note {
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: #666;
     }
   </style>
 </head>
 <body>
+  <h1>Encriptar & Desencriptar Archivos</h1>
   <div class="container">
-    <h1>💸 Impermanent Loss V3</h1>
-    
-    <label>💰 Inversión total (USD)</label>
-    <input type="number" id="investment" placeholder="Ej: 1000" min="0">
-
-    <label>🔢 Precio inicial (Token A / Token B)</label>
-    <input type="number" id="initialPrice" placeholder="Ej: 1000" min="0">
-
-    <label>📈 Precio actual</label>
-    <input type="number" id="currentPrice" placeholder="Ej: 1500" min="0">
-
-    <label>📉 Precio mínimo del rango</label>
-    <input type="number" id="minPrice" placeholder="Ej: 800" min="0">
-
-    <label>📈 Precio máximo del rango</label>
-    <input type="number" id="maxPrice" placeholder="Ej: 2000" min="0">
-
-    <button onclick="calcularIL()">Calcular IL</button>
-
-    <div class="result" id="resultado"></div>
+    <!-- Encriptar -->
+    <div class="card">
+      <h2>🔒 Encriptar</h2>
+      <form id="encrypt-form">
+        <div class="field">
+          <label for="encrypt-file">Selecciona archivo</label>
+          <input type="file" id="encrypt-file" name="file" required />
+        </div>
+        <div class="field">
+          <label for="encrypt-pass">Contraseña</label>
+          <input type="password" id="encrypt-pass" name="password" required />
+        </div>
+        <button type="submit">Encriptar & Descargar</button>
+      </form>
+    </div>
+    <!-- Desencriptar -->
+    <div class="card">
+      <h2>🔓 Desencriptar</h2>
+      <form id="decrypt-form">
+        <div class="field">
+          <label for="decrypt-file">Selecciona archivo .enc</label>
+          <input type="file" id="decrypt-file" name="file" accept=".enc" required />
+        </div>
+        <div class="field">
+          <label for="decrypt-pass">Contraseña</label>
+          <input type="password" id="decrypt-pass" name="password" required />
+        </div>
+        <button type="submit">Desencriptar & Descargar</button>
+      </form>
+    </div>
   </div>
 
   <script>
-    function calcularIL() {
-      const investment = parseFloat(document.getElementById("investment").value);
-      const P0 = parseFloat(document.getElementById("initialPrice").value);
-      const P = parseFloat(document.getElementById("currentPrice").value);
-      const Pmin = parseFloat(document.getElementById("minPrice").value);
-      const Pmax = parseFloat(document.getElementById("maxPrice").value);
-      const res = document.getElementById("resultado");
+    // Función genérica para manejar formularios
+    async function handleForm(formId, path) {
+      const form = document.getElementById(formId);
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fileInput = form.querySelector('input[type="file"]');
+        const passInput = form.querySelector('input[type="password"]');
+        const file = fileInput.files[0];
+        const password = passInput.value;
+        if (!file || !password) return;
 
-      if (!investment || !P || !P0 || !Pmin || !Pmax || Pmin >= Pmax || P < 0 || P0 <= 0) {
-        res.innerHTML = "❌ Revisa los valores ingresados.";
-        return;
-      }
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('password', password);
 
-      let valorLP = 0;
-      let valorHold = investment * (P / P0);
+        try {
+          const res = await fetch(path, {
+            method: 'POST',
+            headers: {
+              'Authorization': 'tenants API-Key 73e11a8e-81bf-4d72-9fd4-7df7a2bc3874'
+            },
+            body: formData
+          });
 
-      // Si precio está fuera del rango
-      if (P <= Pmin) {
-        valorLP = investment * Math.sqrt(Pmin / P0);
-      } else if (P >= Pmax) {
-        valorLP = investment * Math.sqrt(P0 / Pmax);
-      } else {
-        // Dentro del rango
-        const sqrtP = Math.sqrt(P);
-        const sqrtPmin = Math.sqrt(Pmin);
-        const sqrtPmax = Math.sqrt(Pmax);
+          if (!res.ok) {
+            const err = await res.json();
+            alert('Error: ' + (err.error || JSON.stringify(err)));
+            return;
+          }
 
-        const L = investment / ((sqrtPmax - sqrtPmin) * P0); // Simplified liquidity
-        const amountToken0 = L * (sqrtPmax - sqrtP);
-        const amountToken1 = L * (sqrtP - sqrtPmin);
+          // Extraer nombre de archivo o usar el original sin .enc
+          const disposition = res.headers.get('Content-Disposition') || '';
+          let filename = file.name;
+          const match = /filename="(.+)"/.exec(disposition);
+          if (match) filename = match[1];
 
-        valorLP = (amountToken0 * P) + amountToken1;
-      }
-
-      const il = (valorLP - valorHold) / valorHold * 100;
-
-      res.innerHTML = `
-        🔍 Valor LP: $${valorLP.toFixed(2)}<br>
-        💼 Valor HODL: $${valorHold.toFixed(2)}<br>
-        📉 Impermanent Loss: <span style="color:red">${il.toFixed(2)}%</span>
-      `;
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+        } catch (error) {
+          console.error(error);
+          alert('Ocurrió un error en la petición');
+        }
+      });
     }
+
+    // Inicializar handlers
+    handleForm('encrypt-form', 'http://localhost:3000/api/encryption_operations/encrypt');
+    handleForm('decrypt-form', 'http://localhost:3000/api/encryption_operations/decrypt');
   </script>
 </body>
 </html>

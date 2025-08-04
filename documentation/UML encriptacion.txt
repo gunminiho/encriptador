@@ -1,0 +1,38 @@
+classDiagram
+    class EncryptEndpoint {
+        +POST /encrypt()
+        -validateRequest()
+        -buildResponse()
+    }
+
+    class MultipartParser {
+        +file : Buffer
+        +password : string
+        +parse(req)
+    }
+
+    class KeyDerivation {
+        +derive(password, salt) : Uint8Array
+        <<utility>>
+    }
+
+    %% Resultado devuelto por CryptoService
+    class EncryptionResult {
+        +cipher : Uint8Array
+        +tag    : Uint8Array
+    }
+
+    class CryptoService {
+        +encrypt(data, key, iv) : EncryptionResult
+        <<utility>>
+    }
+
+    class OperationRepository {
+        +save(meta)
+        <<repository>>
+    }
+
+    EncryptEndpoint --> MultipartParser   : usa
+    EncryptEndpoint --> KeyDerivation     : delega
+    EncryptEndpoint --> CryptoService     : delega
+    EncryptEndpoint --> OperationRepository : registra

@@ -6,12 +6,13 @@ export interface EncryptionResult {
   blob: Uint8Array; // salt|iv|tag|ciphertext
   salt: Uint8Array;
   iv: Uint8Array;
+  fileType?: string;
 }
 
 const SCRYPT = { N: 1 << 15, r: 8, p: 1, keyLen: 32, maxmem: 64 * 1024 * 1024 };
-const SALT_LEN: number = 16;
-const IV_LEN: number = 12;
-const TAG_LEN = 16;
+export const SALT_LEN: number = 16;
+export const IV_LEN: number = 12;
+export const TAG_LEN = 16;
 
 export async function encryptFileGCM(buffer: ArrayBuffer, password: string, name: string): Promise<EncryptionResult> {
   const salt = randomBytes(SALT_LEN);
@@ -24,10 +25,10 @@ export async function encryptFileGCM(buffer: ArrayBuffer, password: string, name
   const tag = cipher.getAuthTag();
 
   const blob = Buffer.concat([salt, iv, tag, ciphertext]);
-  return { fileName: `${name}.enc`, blob: new Uint8Array(blob), salt, iv };
+  return { fileName: `${name}.enc`, fileType: name.split(".")[1], blob: new Uint8Array(blob), salt, iv };
 }
 
-export async function decryptFileGCM(buffer: ArrayBuffer, password: string | FormDataEntryValue | null, name: string): Promise<EncryptionResult> {
+export async function decryptFileGCM(buffer: ArrayBuffer, password: string, name: string): Promise<EncryptionResult> {
   // 1. Reconstituir Buffer
   const buf = Buffer.from(buffer);
 

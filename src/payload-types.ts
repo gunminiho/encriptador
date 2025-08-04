@@ -213,7 +213,6 @@ export interface Tenant {
 export interface EncryptionOperation {
   id: string;
   tenant_id: string | Tenant;
-  request_id: string;
   operation_type: 'encrypt' | 'decrypt';
   file_count: number;
   total_size_bytes: number;
@@ -227,25 +226,8 @@ export interface EncryptionOperation {
     | boolean
     | null;
   processing_time_ms: number;
-  is_password_provided: boolean;
-  /**
-   * Si el cliente proporciona la contraseña, esta se autogenera
-   */
-  password: string;
-  encryption_method: 'AES' | 'RSA';
+  encryption_method: 'AES-256-GCM';
   success: boolean;
-  /**
-   * Metadata para el evento
-   */
-  metadata?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
   operation_timestamp: string;
   updatedAt: string;
   createdAt: string;
@@ -448,17 +430,13 @@ export interface TenantsSelect<T extends boolean = true> {
  */
 export interface EncryptionOperationsSelect<T extends boolean = true> {
   tenant_id?: T;
-  request_id?: T;
   operation_type?: T;
   file_count?: T;
   total_size_bytes?: T;
   file_types?: T;
   processing_time_ms?: T;
-  is_password_provided?: T;
-  password?: T;
   encryption_method?: T;
   success?: T;
-  metadata?: T;
   operation_timestamp?: T;
   updatedAt?: T;
   createdAt?: T;

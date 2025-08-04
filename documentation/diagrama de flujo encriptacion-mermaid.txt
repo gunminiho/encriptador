@@ -1,0 +1,16 @@
+flowchart TD
+    A([Cliente]) -->|Archivo + password| B[API /encrypt]
+    B --> C{Header x-api-key válido?}
+    C -- No --> Z1[[HTTP&nbsp;401<br/>Acceso&nbsp;no&nbsp;autorizado]]
+    C -- Sí --> D{Multipart correcto?<br/>&#40;1&nbsp;archivo&nbsp;+&nbsp;password&#41;}
+    D -- No --> Z2[[HTTP&nbsp;400<br/>Bad&nbsp;Request]]
+    D -- Sí --> E[Generar salt #40;16&nbsp;B#41;<br/>y IV #40;12&nbsp;B#41;]
+    E --> F[Derivar clave<br/>scrypt#40;password,&nbsp;salt#41;]
+    F --> G[Cifrar con AES-256-GCM<br/>#40;usa&nbsp;clave&nbsp;+&nbsp;IV#41;]
+    G --> H[Construir blob<br/>salt&nbsp;#124; &nbsp;iv&nbsp;#124;&nbsp;tag&nbsp;#124;&nbsp;ciphertext]
+    H --> I[Registrar operación<br/>en encryption_operations]
+    I --> J[[HTTP&nbsp;200<br/>Body:&nbsp;blob<br/>Content-Disposition=file.enc<br>]]
+
+    %% Estilo de nodos de error >%%X-Request-Id%%
+    classDef error fill:#ffdddd,stroke:#ffaaaa,color:#333
+    class Z1,Z2 error

@@ -28,6 +28,7 @@
     "crypto-js": "^4.2.0",
     "crypto-ts": "^1.0.2",
     "dotenv": "16.4.7",
+    "file-type": "^21.0.0",
     "graphql": "^16.8.1",
     "next": "15.4.4",
     "payload": "3.49.1",

@@ -1,5 +1,6 @@
 // src/services/encryption.ts
 import { randomBytes, pbkdf2Sync, createCipheriv } from 'crypto';
+import { words } from '@/utils/randomWords';
 
 export interface EncryptionResult {
   /** El contenido cifrado (ciphertext + tag) en un Buffer */

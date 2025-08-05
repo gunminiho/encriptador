@@ -3,7 +3,10 @@ import { PayloadRequest } from 'payload';
 import { response, fileResponse } from '@/utils/response';
 import { addDataAndFileToRequest } from 'payload';
 import type { EncryptionOperation } from '@/payload-types';
-import { detectFileTypeFromBlob } from '@/utils/fileChecker';
+import { isAllowedFile } from '@/utils/fileChecker';
+import { bytesToMB } from '@/utils/converter';
+
+type PreEncryptionOperation = Omit<EncryptionOperation, 'id' | 'createdAt' | 'updatedAt'>;
 
 export const encryptHandler = async (req: PayloadRequest): Promise<Response> => {
   try {
@@ -32,9 +35,10 @@ export const encryptHandler = async (req: PayloadRequest): Promise<Response> => 
       // console.log('---------');
 
       // --- Validaciones ---
-      const { extension, mimeType } = await detectFileTypeFromBlob(req.file?.data, req.file?.name);
-      console.log('mime:', extension, mimeType);
+      console.log('file: ', req.file);
 
+      const { allowed, extension, mimeType } = await isAllowedFile(req.file?.data, req.file?.name);
+      if (!allowed) errors.push(`el tipo de archivo .${extension} or mime-type ${mimeType} no esta permitido, revisa lista no permitida de archivos`);
       if ((Array.isArray(files) && files.length < 1) || !files) errors.push('No se detectaron archivos para encriptar');
       if (password && Array.isArray(files) && files.length < 1) errors.push('No se detecto archivo para encriptar con esta contraseña');
       if (!password && Array.isArray(files) && files.length === 1) errors.push('No se detecto password para encriptar un solo archivo');
@@ -48,14 +52,16 @@ export const encryptHandler = async (req: PayloadRequest): Promise<Response> => 
       // 3. Cifrar
       const start = Date.now();
       if (!Array.isArray(files) && typeof password === 'string') {
-        const { fileName, blob, fileType } = await encryptFileGCM(files.data, password, files.name);
+        const { fileName, blob } = await encryptFileGCM(files.data, password, files.name);
+        console.log('🔒 Encrypted blob length:', blob.byteLength);
+        // añade esta funcion quiero que convivan ambas
         const elapsed = Date.now() - start;
-        const encrypt_result: EncryptionOperation = {
+        const encrypt_result: PreEncryptionOperation = {
           tenant_id: req.user.id,
           operation_type: 'encrypt',
           file_count: 1,
-          total_size_bytes: blob.length,
-          file_types: { fileType },
+          total_size_mb: bytesToMB(blob.length),
+          file_types: { fileType: [extension] },
           processing_time_ms: elapsed,
           encryption_method: 'AES-256-GCM',
           success: blob ? true : false,

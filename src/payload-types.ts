@@ -215,7 +215,7 @@ export interface EncryptionOperation {
   tenant_id: string | Tenant;
   operation_type: 'encrypt' | 'decrypt';
   file_count: number;
-  total_size_bytes: number;
+  total_size_mb: number;
   file_types?:
     | {
         [k: string]: unknown;
@@ -432,7 +432,7 @@ export interface EncryptionOperationsSelect<T extends boolean = true> {
   tenant_id?: T;
   operation_type?: T;
   file_count?: T;
-  total_size_bytes?: T;
+  total_size_mb?: T;
   file_types?: T;
   processing_time_ms?: T;
   encryption_method?: T;

@@ -1,6 +1,5 @@
 // src/services/encryption.ts
 import { randomBytes, scryptSync, createCipheriv, createDecipheriv } from 'crypto';
-
 export interface EncryptionResult {
   fileName: string;
   blob: Uint8Array; // salt|iv|tag|ciphertext
@@ -15,17 +14,18 @@ export const IV_LEN: number = 12;
 export const TAG_LEN = 16;
 
 export async function encryptFileGCM(buffer: ArrayBuffer, password: string, name: string): Promise<EncryptionResult> {
+  // 1️⃣ Derivar clave
   const salt = randomBytes(SALT_LEN);
   const iv = randomBytes(IV_LEN);
-  //console.log("scrypt: ",salt);
   const key = scryptSync(password, salt, SCRYPT.keyLen, SCRYPT);
 
+  // 2️⃣ Cifar archivo
   const cipher = createCipheriv('aes-256-gcm', key, iv);
   const ciphertext = Buffer.concat([cipher.update(Buffer.from(buffer)), cipher.final()]);
   const tag = cipher.getAuthTag();
 
   const blob = Buffer.concat([salt, iv, tag, ciphertext]);
-  return { fileName: `${name}.enc`, fileType: name.split(".")[1], blob: new Uint8Array(blob), salt, iv };
+  return { fileName: `${name}.enc`, blob: blob, salt, iv };
 }
 
 export async function decryptFileGCM(buffer: ArrayBuffer, password: string, name: string): Promise<EncryptionResult> {

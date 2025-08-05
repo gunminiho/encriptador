@@ -2,6 +2,7 @@
 import { CollectionConfig } from 'payload';
 import { encryptHandler } from '@/handlers/encryptHandler';
 import { decryptHandler } from '@/handlers/decryptHandler';
+import { massiveEncryption } from '@/handlers/massiveEncrypt';
 
 export const EncryptionOperations: CollectionConfig = {
   slug: 'encryption_operations',
@@ -39,9 +40,9 @@ export const EncryptionOperations: CollectionConfig = {
       }
     },
     {
-      name: 'total_size_bytes',
+      name: 'total_size_mb',
       type: 'number',
-      label: 'Total Size (bytes)',
+      label: 'Total Size (megabytes)',
       required: true,
       defaultValue: 0,
       min: 0,
@@ -100,14 +101,19 @@ export const EncryptionOperations: CollectionConfig = {
   ],
   endpoints: [
     {
-      path: '/encrypt', // =>   /api/encryption_operations/encrypt
+      path: '/v1/encrypt', // =>   /api/encryption_operations/encrypt
       method: 'post',
       handler: encryptHandler
     },
     {
-      path: '/decrypt', // =>  /api/encryption_operations/decrypt
+      path: '/v1/decrypt', // =>  /api/encryption_operations/decrypt
       method: 'post',
       handler: decryptHandler
+    },
+    {
+      path: '/v1/massive-encrypt', // =>  /api/encryption_operations/decrypt
+      method: 'post',
+      handler: massiveEncryption
     }
   ]
 };

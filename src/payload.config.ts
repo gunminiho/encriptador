@@ -17,8 +17,18 @@ import { ErrorLogs } from '@/collections/ErrorLog';
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
 
+
 export default buildConfig({
   cors: '*',
+  // upload: {
+  //   tempFileDir : TEMP_PATH,
+  //   useTempFiles: true,
+  //   limits:{
+  //     fileSize: 25 * 1024 * 1024 // 25MB
+  //   }
+  //   // staticURL: '/uploads',        // no es admitido en v2
+  //   // Puedes configurar limits, transform, etc. aquí
+  // },
   admin: {
     user: Users.slug,
     importMap: {

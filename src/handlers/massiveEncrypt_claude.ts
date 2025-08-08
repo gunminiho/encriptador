@@ -3,7 +3,7 @@ import { PayloadRequest } from 'payload';
 import { v4 as uuidv4 } from 'uuid';
 import { addDataAndFileToRequest } from 'payload';
 import { encryptFileGCM } from '@/services/encryption';
-import { response } from '@/utils/response';
+import { response } from '@/utils/http/response';
 
 // ==========================================
 // 🔧 INTERFACES Y TIPOS (Dependency Inversion)
@@ -396,7 +396,7 @@ class MassiveEncryptionFactory {
 // 🎯 ENDPOINT PRINCIPAL - Ultra Simplificado
 // ==========================================
 
- export const massiveEncryption = async (req: PayloadRequest): Promise<Response> => {
+export const massiveEncryption = async (req: PayloadRequest): Promise<Response> => {
   const facade = MassiveEncryptionFactory.create();
   return facade.execute(req);
 };

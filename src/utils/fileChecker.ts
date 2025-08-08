@@ -52,7 +52,7 @@ const EXTENSION_BLACKLIST = new Set([
   'pptm'
 ]);
 
-export async function detectFileTypeFromBlob(
+async function detectFileTypeFromBlob(
   data: Uint8Array | Buffer<ArrayBufferLike> | undefined,
   fileName: string | undefined
 ): Promise<{ extension: string; mimeType: string }> {

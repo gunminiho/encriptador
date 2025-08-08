@@ -23,6 +23,8 @@
     "@payloadcms/payload-cloud": "3.49.1",
     "@payloadcms/richtext-lexical": "3.49.1",
     "@payloadcms/ui": "3.49.1",
+    "@types/archiver": "^6.0.3",
+    "archiver": "^7.0.1",
     "bcrypt-ts": "^7.1.0",
     "cross-env": "^7.0.3",
     "crypto-js": "^4.2.0",

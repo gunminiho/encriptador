@@ -1,6 +1,6 @@
 import { decryptFileGCM } from '@/services/encryption';
 import { PayloadRequest } from 'payload';
-import { response, fileResponse } from '@/utils/response';
+import { response, fileResponse } from '@/utils/http/response';
 import { addDataAndFileToRequest } from 'payload';
 import type { EncryptionResult } from '@/services/encryption';
 
@@ -27,7 +27,7 @@ export const decryptHandler = async (req: PayloadRequest): Promise<Response> => 
     // Extraer el archivo .enc
     let encFile: any;
     console.log('req.file', req.file);
-    
+
     if (Array.isArray(req.file) && req.file.length === 1) {
       encFile = req.file[0];
     } else if (typeof req.file === 'object' && req.file !== null && 'name' in req.file) {

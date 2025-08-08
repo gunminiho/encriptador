@@ -1,10 +1,10 @@
 import { encryptFileGCM } from '@/services/encryption';
 import { PayloadRequest } from 'payload';
-import { response, fileResponse } from '@/utils/response';
+import { response, fileResponse } from '@/utils/http/response';
 import { addDataAndFileToRequest } from 'payload';
 import type { EncryptionOperation } from '@/payload-types';
 import { isAllowedFile } from '@/utils/fileChecker';
-import { bytesToMB } from '@/utils/converter';
+import { bytesToMB } from '@/utils/data_processing/converter';
 
 type PreEncryptionOperation = Omit<EncryptionOperation, 'id' | 'createdAt' | 'updatedAt'>;
 

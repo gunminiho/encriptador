@@ -1,66 +1,60 @@
 // src/collections/EncryptionOperations.ts
 import { PayloadRequest } from 'payload';
 import { v4 as uuidv4 } from 'uuid';
-import { addDataAndFileToRequest } from 'payload';
 import { encryptFileGCM } from '@/services/encryption';
-import { response } from '@/utils/response';
-import { Readable } from 'stream';
+import { response } from '@/utils/http/response';
+import archiver from 'archiver';
+import { PassThrough } from 'stream';
+import { performance } from 'perf_hooks';
+import { isValidUser } from '@/utils/http/auth';
+import { getRequestData, MassiveEncryptionRequest } from '@/utils/http/requestProcesses';
+import { csvParser } from '@/utils/data_processing/csvParser';
+import { validateRequest } from '@/utils/validator/requestValidator';
 
 export const massiveEncryption = async (req: PayloadRequest): Promise<Response> => {
+  const errors: Array<string> = [];
   try {
     // 1️⃣ Auth
-    const auth = req.headers.get('Authorization') || '';
-    if (!auth.includes('API-Key') || !req.user) {
-      return response(401, { error: 'No autorizado' }, 'Api Key inválida');
-    }
+    const validUser = await isValidUser(req);
+    if (validUser instanceof Response) return validUser;
 
     // 2️⃣ Multipart → files + CSV
-    await addDataAndFileToRequest(req);
-    const allFiles = Array.isArray(req.file) ? req.file : [req.file].filter(Boolean);
-    const csvFile = allFiles.find((f) => f.name === 'passwords.csv');
-    const dataFiles = allFiles.filter((f) => f.name !== 'passwords.csv');
-
-    if (!csvFile) {
-      return response(400, { error: 'Falta passwords.csv' }, 'Bad Request');
-    }
-    if (dataFiles.length < 2) {
-      return response(400, { error: 'Se necesitan ≥2 archivos para encriptación masiva' }, 'Bad Request');
-    }
+    const responseRequest = await getRequestData(req);
+    if (responseRequest instanceof String) errors.push(responseRequest as string);
+    const { csvFile, dataFiles } = responseRequest as MassiveEncryptionRequest;
 
     // 3️⃣ Parsear CSV en un Map<fileName,password>
-    const csvText = Buffer.from((csvFile as any).data).toString('utf-8');
-    const pwMap = new Map<string, string>();
-    for (const line of csvText.split(/\r?\n/).filter((l) => l.trim())) {
-      const [file_name, pwd] = line.split(/\s*[;,]\s*/).map((s) => s.trim());
-      if (file_name && pwd) pwMap.set(file_name, pwd);
-    }
+    const pwMap = csvParser(csvFile); // devuelve Map<string, string>;
 
-    //console.log('csvText:', csvText );
-    pwMap.forEach((pw, key) => console.log(pw, ' || ', key));
+    // 4️⃣ Validaciones: que cada archivo tenga password, etc
+    const validateResponse = validateRequest({ csvFile, dataFiles }, pwMap as Map<string, string>);
+    if (validateResponse instanceof Response) return validateResponse;
 
-    // 4️⃣ Validar que cada archivo tenga password
-    const missing = dataFiles.filter((f) => !pwMap.has(f.name));
-    if (missing.length) {
-      return response(400, { error: `Faltan passwords para: ${missing.map((f) => f.name).join(', ')}` }, 'Bad Request');
-    }
+    // 5️⃣ Cifrar todos y enviar zip
+    const zipStream = new PassThrough(); // stream de salida
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    archive.pipe(zipStream); // conecta zip al stream
 
-    // 5️⃣ Cifrar todos y montar multipart
-    const boundary = `ENC-MULTI-${uuidv4()}`;
-    const parts: Buffer[] = [];
-
-    for (const file of dataFiles) {
-      const pwd = pwMap.get(file.name)!;
+    const totalFiles = dataFiles.length;
+    const start = performance.now(); // ⏱️ inicio del cronómetro
+    console.log(`🔐 Archivos a encriptar: ${totalFiles}`);
+    for (let i = 0; i < totalFiles; i++) {
+      const file = dataFiles[i];
+      const pwd = (pwMap as Map<string, string>).get(file.name)!;
       const { fileName, blob } = await encryptFileGCM((file as any).data, pwd, file.name);
-      console.log(fileName, ' 🔓 Received buffer length:', blob.byteLength);
-      // Cabecera de parte
-      parts.push(Buffer.from(`--${boundary}\r\n` + `Content-Disposition: attachment; filename="${fileName}"\r\n` + `Content-Type: application/octet-stream\r\n\r\n`));
-      // Cuerpo binario
-      parts.push(Buffer.from(blob));
-      parts.push(Buffer.from('\r\n'));
+      const percent = ((i + 1) / totalFiles) * 100;
+      const percentFormatted = percent.toFixed(2).padStart(6, ' ');
+      process.stdout.write(`\r🛠️ Encriptando ${i + 1} de ${totalFiles} | Completado: ${percentFormatted}%`);
+      if (!Buffer.isBuffer(blob)) {
+        throw new Error(`encryptFileGCM no devolvió un Buffer válido para ${file.name}`);
+      }
+      archive.append(blob, { name: fileName });
     }
-    // Cierre de multipart
-    parts.push(Buffer.from(`--${boundary}--\r\n`));
-    const body = Buffer.concat(parts);
+    const end = performance.now(); // ⏱️ fin del cronómetro
+    const elapsedMs = end - start;
+    console.log(`\n✅ Encriptación completada en ${(elapsedMs / 1000).toFixed(2)} segundos.`);
+    // Finaliza el zip
+    archive.finalize();
 
     // 6️⃣ Registrar operación masiva
     await req.payload.create({
@@ -71,20 +65,18 @@ export const massiveEncryption = async (req: PayloadRequest): Promise<Response> 
         file_count: dataFiles.length,
         total_size_mb: dataFiles.reduce((sum, f) => sum + (f as any).size, 0),
         file_types: dataFiles.map((f) => f.name.split('.').pop()?.toLowerCase()),
-        processing_time_ms: 0, // opcional: medir por separado
+        processing_time_ms: elapsedMs,
         encryption_method: 'AES-256-GCM',
         success: true,
         operation_timestamp: new Date().toISOString()
       }
     });
-
-    const bodyStream = Readable.from(parts);
-
     // 7️⃣ Responder multipart/mixed
-    return new Response(bodyStream as any, {
+    return new Response(zipStream as any, {
       status: 200,
       headers: {
-        'Content-Type': `multipart/mixed; boundary=${boundary}`,
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="${'encriptado_' + uuidv4()}.zip"`,
         'Transfer-Encoding': 'chunked'
       }
     });

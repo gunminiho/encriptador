@@ -25,7 +25,7 @@ export async function encryptFileGCM(buffer: ArrayBuffer, password: string, name
   const tag = cipher.getAuthTag();
 
   const blob = Buffer.concat([salt, iv, tag, ciphertext]);
-  return { fileName: `${name}.enc`, blob: blob, salt, iv };
+  return { fileName: `${name}.enc`, blob, salt, iv };
 }
 
 export async function decryptFileGCM(buffer: ArrayBuffer, password: string, name: string): Promise<EncryptionResult> {

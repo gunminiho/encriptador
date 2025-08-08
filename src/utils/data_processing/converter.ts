@@ -5,6 +5,6 @@
  * @returns  Megabytes como número con la cantidad de decimales indicada.
  */
 export function bytesToMB(bytes: number, decimals = 4): number {
-  const BYTES_IN_MB = 1024 ** 2;           
+  const BYTES_IN_MB = 1024 ** 2;
   return Number((bytes / BYTES_IN_MB).toFixed(decimals));
 }

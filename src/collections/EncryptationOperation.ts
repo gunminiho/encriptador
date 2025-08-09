@@ -2,15 +2,21 @@
 import { CollectionConfig } from 'payload';
 import { encryptHandler } from '@/handlers/encryptHandler';
 import { decryptHandler } from '@/handlers/decryptHandler';
-import { massiveEncryption } from '@/handlers/massiveEncrypt';
+import { massiveEncryptionHandler } from '@/handlers/massiveEncrypt';
 
 export const EncryptionOperations: CollectionConfig = {
   slug: 'encryption_operations',
   timestamps: true,
   admin: {
-    useAsTitle: 'tenant_id'
-  },
+    useAsTitle: 'operation_title', // ← ahora es texto
+  },  
   fields: [
+     // 1) Título derivado, solo lectura
+    {
+      name: 'operation_title',
+      type: 'text',
+      admin: { readOnly: true },
+    },
     {
       name: 'tenant_id',
       type: 'relationship',
@@ -99,6 +105,27 @@ export const EncryptionOperations: CollectionConfig = {
       }
     }
   ],
+  hooks: {
+    beforeValidate: [
+      ({ data }) => {
+        // Defensivo: convierte todo a string seguro
+        const toStr = (v: unknown): string => (typeof v === 'string' ? v : v == null ? '' : String(v));
+        const op = toStr(data?.operation_type ?? 'operation');
+        const files = Number.isFinite(data?.file_count) ? (data!.file_count as number) : 0;
+        const tsRaw = data?.operation_timestamp ?? new Date().toLocaleString("es-PE");
+        const d = tsRaw instanceof Date ? tsRaw : new Date(tsRaw);
+        const when = Number.isNaN(d.getTime()) ? '' : d.toLocaleString("es-PE").replace('T', ' ').substring(0, 19);
+        const tenant = toStr(
+          typeof data?.tenant_id === 'string'
+            ? data.tenant_id
+            : // si viene como objeto relationship
+              ((data?.tenant_id as any)?.id ?? (data?.tenant_id as any)?.value ?? '')
+        );
+
+        data!.operation_title = `${op.toUpperCase()} • ${files} file(s) • ${when} • ${tenant}`;
+      }
+    ]
+  },
   endpoints: [
     {
       path: '/v1/encrypt', // =>   /api/encryption_operations/encrypt
@@ -113,7 +140,7 @@ export const EncryptionOperations: CollectionConfig = {
     {
       path: '/v1/massive-encrypt', // =>  /api/encryption_operations/decrypt
       method: 'post',
-      handler: massiveEncryption
+      handler: massiveEncryptionHandler
     }
   ]
 };

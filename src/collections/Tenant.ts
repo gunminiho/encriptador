@@ -36,31 +36,5 @@ export const Tenants: CollectionConfig = {
         readOnly: true,
       },
     },
-    // {
-    //   name: 'api_key',
-    //   type: 'text',
-    //   label: 'API Key',
-    //   defaultValue: () => generateApiKey(),
-    //   unique: true,
-    //   required: true,
-    //   admin: {
-    //     readOnly: true,
-    //     description: 'Api Key for Tentants',
-    //     position: 'sidebar',
-    //   },
-    // },
-    // {
-    //   name: 'api_secret',
-    //   type: 'text',
-    //   label: 'API Secret',
-    //   required: true,
-    //   unique: true,
-    //   defaultValue: () => generateApiSecret(),
-    //   admin: {
-    //     readOnly: true,
-    //     description: 'Api Secret for Tentants',
-    //     position: 'sidebar',
-    //   },
-    // },
   ],
 }

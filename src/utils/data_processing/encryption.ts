@@ -1,11 +1,15 @@
 // src/services/encryption.ts
 import { randomBytes, scryptSync, createCipheriv, createDecipheriv } from 'crypto';
+import archiver from 'archiver';
+import { PassThrough } from 'stream';
+import { performance } from 'perf_hooks';
+import type { PayloadFileRequest } from '@/utils/http/requestProcesses';
+
 export interface EncryptionResult {
   fileName: string;
   blob: Uint8Array; // salt|iv|tag|ciphertext
   salt: Uint8Array;
   iv: Uint8Array;
-  fileType?: string;
 }
 
 const SCRYPT = { N: 1 << 15, r: 8, p: 1, keyLen: 32, maxmem: 64 * 1024 * 1024 };
@@ -56,3 +60,35 @@ export async function decryptFileGCM(buffer: ArrayBuffer, password: string, name
     iv
   };
 }
+
+export const massiveEncryption = async (
+  dataFiles: Array<PayloadFileRequest>,
+  pwMap: Map<string, string>
+): Promise<{ zipStream: ReadableStream<Uint8Array>; elapsedMs: number }> => {
+  // 5️⃣ Cifrar todos y enviar zip
+  const start = performance.now(); // ⏱️ inicio del cronómetro
+  const zipStream = new PassThrough(); // stream de salida
+  const archive = archiver('zip', { zlib: { level: 9 } }); // archivo zip y compresión
+  archive.pipe(zipStream); // conecta zip al stream
+
+  const totalFiles = dataFiles.length;
+  console.log(`🔐 Archivos a encriptar: ${totalFiles}`);
+  for (let i = 0; i < totalFiles; i++) {
+    const file = dataFiles[i];
+    const pwd = (pwMap as Map<string, string>).get(file.name)!;
+    const { fileName, blob } = await encryptFileGCM(file.data as unknown as ArrayBuffer, pwd, file.name);
+    const percent = ((i + 1) / totalFiles) * 100;
+    const percentFormatted = percent.toFixed(2).padStart(6, ' ');
+    process.stdout.write(`\r🛠️ Encriptando ${i + 1} de ${totalFiles} | Completado: ${percentFormatted}%`);
+    if (!Buffer.isBuffer(blob)) {
+      throw new Error(`encryptFileGCM no devolvió un Buffer válido para ${file.name}`);
+    }
+    archive.append(blob, { name: fileName });
+  }
+  const end = performance.now(); // ⏱️ fin del cronómetro
+  const elapsedMs = end - start;
+  console.log(`\n✅ Encriptación completada en ${(elapsedMs / 1000).toFixed(2)} segundos.`);
+  // Finaliza el zip
+  archive.finalize();
+  return { zipStream: zipStream as unknown as ReadableStream<Uint8Array>, elapsedMs };
+};

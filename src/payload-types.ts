@@ -212,6 +212,7 @@ export interface Tenant {
  */
 export interface EncryptionOperation {
   id: string;
+  operation_title?: string | null;
   tenant_id: string | Tenant;
   operation_type: 'encrypt' | 'decrypt';
   file_count: number;
@@ -429,6 +430,7 @@ export interface TenantsSelect<T extends boolean = true> {
  * via the `definition` "encryption_operations_select".
  */
 export interface EncryptionOperationsSelect<T extends boolean = true> {
+  operation_title?: T;
   tenant_id?: T;
   operation_type?: T;
   file_count?: T;

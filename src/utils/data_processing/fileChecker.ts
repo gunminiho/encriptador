@@ -1,5 +1,5 @@
 import { fileTypeFromBuffer } from 'file-type';
-import { SALT_LEN, IV_LEN, TAG_LEN } from '@/services/encryption';
+import { SALT_LEN, IV_LEN, TAG_LEN } from '@/utils/data_processing/encryption';
 
 import path from 'path';
 
@@ -46,16 +46,9 @@ const EXTENSION_BLACKLIST = new Set([
   'apk',
   'app',
   'dmg',
-  // Office con macros
-  'docm',
-  'xlsm',
-  'pptm'
 ]);
 
-async function detectFileTypeFromBlob(
-  data: Uint8Array | Buffer<ArrayBufferLike> | undefined,
-  fileName: string | undefined
-): Promise<{ extension: string; mimeType: string }> {
+async function detectFileTypeFromBlob(data: Uint8Array | Buffer<ArrayBufferLike> | undefined, fileName: string | undefined): Promise<{ extension: string; mimeType: string }> {
   // 1️⃣ Intento magic-number
   const type = data ? await fileTypeFromBuffer(data) : undefined;
   if (type) {
@@ -64,7 +57,6 @@ async function detectFileTypeFromBlob(
       mimeType: type.mime
     };
   }
-  console.log('name: ', fileName);
   // 2️⃣ Fallback por extensión
   const ext = fileName ? path.extname(fileName).slice(1).toLowerCase() : '*.lol';
   switch (ext) {
@@ -82,8 +74,9 @@ async function detectFileTypeFromBlob(
         throw new Error('Archivo .enc demasiado pequeño para ser válido');
       }
       return { extension: 'enc', mimeType: 'application/octet-stream' };
-    // añade aquí más casos si quieres:
-    // case 'html': return { ext: 'html', mime: 'text/html' };
+    case 'html':
+      return { extension: 'html', mimeType: 'text/html' };
+    // añade aquí más casos:
     default:
       break;
   }
@@ -96,6 +89,5 @@ export async function isAllowedFile(
   fileName: string | undefined
 ): Promise<{ allowed: boolean; extension: string; mimeType: string }> {
   const { extension, mimeType } = await detectFileTypeFromBlob(data, fileName);
-  //const ext = path.extname(filename).slice(1).toLowerCase();
   return { allowed: !EXTENSION_BLACKLIST.has(extension), extension, mimeType };
 }

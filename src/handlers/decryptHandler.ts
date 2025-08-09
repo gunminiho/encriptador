@@ -1,8 +1,8 @@
-import { decryptFileGCM } from '@/services/encryption';
+import { decryptFileGCM } from '@/utils/data_processing/encryption';
 import { PayloadRequest } from 'payload';
 import { response, fileResponse } from '@/utils/http/response';
 import { addDataAndFileToRequest } from 'payload';
-import type { EncryptionResult } from '@/services/encryption';
+import type { EncryptionResult } from '@/utils/data_processing/encryption';
 
 const result: EncryptionResult = {
   fileName: '',

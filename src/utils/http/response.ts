@@ -1,3 +1,9 @@
+type BinaryLike =
+  | ArrayBuffer
+  | ArrayBufferView // Uint8Array, DataView, Buffer, etc.
+  | Blob
+  | ReadableStream<Uint8Array>;
+
 export function response(status: number, data?: unknown, message?: string, headers?: Record<string, string>): Response {
   let normalizedData = data;
 
@@ -32,19 +38,67 @@ export function response(status: number, data?: unknown, message?: string, heade
   return new Response(body, { status, headers: allHeaders });
 }
 
-// utils/fileResponse.ts
-export function fileResponse(
-  binary: Uint8Array | ArrayBuffer,
-  filename: string,
-  extraHeaders: Record<string, string> = {},
-): Response {
-  return new Response(binary, {
+function contentDispositionAttachment(filename: string): string {
+  const asciiFallback = filename.replace(/[^\x20-\x7E]/g, '_');
+  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+}
+
+export function fileResponse(binary: BinaryLike, filename: string, extraHeaders: Record<string, string> = {}): Response {
+  // ⚠️ No importes BodyInit: usa el global
+  const body: BinaryLike =
+    binary instanceof Blob
+      ? binary
+      : binary instanceof ReadableStream
+        ? binary
+        : ArrayBuffer.isView(binary)
+          ? binary
+          : binary instanceof ArrayBuffer
+            ? binary
+            : new Uint8Array(binary as ArrayBuffer);
+
+  return new Response(body as BodyInit, {
     status: 200,
     headers: {
       'Content-Type': 'application/octet-stream',
-      'Content-Disposition': `attachment; filename="${filename}"`,
-      ...extraHeaders,
-    },
+      'Content-Disposition': contentDispositionAttachment(filename),
+      ...extraHeaders
+    }
   });
 }
 
+export function streamFileResponse(
+  stream: ReadableStream<Uint8Array>,
+  filename: string,
+  contentType = 'application/octet-stream',
+  extraHeaders: Record<string, string> = {}
+): Response {
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      'Content-Type': contentType,
+      // RFC 5987: soporta nombres con UTF-8 + fallback ASCII
+      'Content-Disposition': contentDispositionAttachment(filename),
+      ...extraHeaders
+    }
+  });
+}
+
+export function handleError(e: unknown, responseMessage: string, endpoint: string, status = 500): Response {
+  const err = toError(e);
+
+  // Log estructurado (solo servidor)
+  const error = err.stack?.split('\n');
+  console.log(`[endpoint:${endpoint}] ERROR:`, { error: error?.at(0), stack: error?.slice(1,5).join("\n") });
+
+  // Respuesta estándar al cliente (no filtrar stack)
+  return response(status, { error: responseMessage }, status === 500 ? 'Internal Server Error' : 'Request Error');
+}
+
+function toError(e: unknown): Error {
+  if (e instanceof Error) return e;
+  try {
+    return new Error(typeof e === 'string' ? e : JSON.stringify(e));
+  } catch {
+    return new Error('Unknown error');
+  }
+}

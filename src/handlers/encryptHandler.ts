@@ -1,24 +1,30 @@
-import { encryptFileGCM } from '@/services/encryption';
+import { encryptFileGCM } from '@/utils/data_processing/encryption';
 import { PayloadRequest } from 'payload';
 import { response, fileResponse } from '@/utils/http/response';
 import { addDataAndFileToRequest } from 'payload';
 import type { EncryptionOperation } from '@/payload-types';
-import { isAllowedFile } from '@/utils/fileChecker';
+import { isAllowedFile } from '@/utils/data_processing/fileChecker';
 import { bytesToMB } from '@/utils/data_processing/converter';
+
+import { isValidUser } from '@/utils/http/auth';
+import { getSingleRequestData } from '@/utils/http/requestProcesses';
 
 type PreEncryptionOperation = Omit<EncryptionOperation, 'id' | 'createdAt' | 'updatedAt'>;
 
 export const encryptHandler = async (req: PayloadRequest): Promise<Response> => {
+  const errors: Array<string> = [];
   try {
-    // 1. Autenticación
-    const authHeader = req.headers.get('Authorization');
-    const isApiKey = typeof authHeader === 'string' && authHeader.includes('API-Key');
-    if (!isApiKey || !req.user) return response(401, { error: 'Acceso no autorizado' }, 'Api Key invalida');
+    // 1️⃣ Auth
+    const validUser = await isValidUser(req);
+    if (validUser instanceof Response) return validUser;
+
     let cloned: Request | null = null;
     let password: string | FormDataEntryValue | null = null;
     let passwords: any = null;
     let files: any = null;
-    const errors: Array<string> = [];
+
+    const x = await getSingleRequestData(req, errors);
+    console.log('x:', x);
 
     // 2. Parsear multipart (1 archivo + password)
     if (typeof req.clone === 'function') {
@@ -28,14 +34,8 @@ export const encryptHandler = async (req: PayloadRequest): Promise<Response> => 
       if (Array.isArray(req.file) && req.file.length > 3) files = req.file.filter((file) => file.name !== 'passwords.csv');
       else if (typeof req.file === 'object' && req.file !== null && req.file.name !== 'passwords.csv') files = req.file;
       passwords = Array.isArray(req.file) && req.file.some((file) => file.name === 'passwords.csv') ? req.file.filter((file) => file.name === 'passwords.csv') : null;
-      // console.log('---------');
-      //console.log('password:', passwords);
-      // console.log('files:', files ? files.length : null);
-      // console.log('passwords:', passwords ? passwords.length : null);
-      // console.log('---------');
-
       // --- Validaciones ---
-      console.log('file: ', req.file);
+      //console.log('file: ', req.file);
 
       const { allowed, extension, mimeType } = await isAllowedFile(req.file?.data, req.file?.name);
       if (!allowed) errors.push(`el tipo de archivo .${extension} or mime-type ${mimeType} no esta permitido, revisa lista no permitida de archivos`);

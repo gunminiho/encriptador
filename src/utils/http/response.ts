@@ -88,7 +88,7 @@ export function handleError(e: unknown, responseMessage: string, endpoint: strin
 
   // Log estructurado (solo servidor)
   const error = err.stack?.split('\n');
-  console.log(`[endpoint:${endpoint}] ERROR:`, { error: error?.at(0), stack: error?.slice(1,5).join("\n") });
+  console.log(`[endpoint:${endpoint}] ERROR:`, { error: error?.at(0), stack: error?.slice(1, 5).join('\n') });
 
   // Respuesta estándar al cliente (no filtrar stack)
   return response(status, { error: responseMessage }, status === 500 ? 'Internal Server Error' : 'Request Error');

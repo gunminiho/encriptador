@@ -2,8 +2,13 @@ import type { PayloadRequest } from 'payload';
 import type { PayloadFileRequest } from '@/utils/http/requestProcesses';
 import { EncryptionOperation } from '@/payload-types';
 import { bytesToMB } from '@/utils/data_processing/converter';
+import { handleError } from '@/utils/http/response';
 
-export const createEncryptionResult = async (req: PayloadRequest, dataFiles: Array<PayloadFileRequest>, elapsedMs: number): Promise<EncryptionOperation | Response> => {
+export const createEncryptionResult = async (
+  req: PayloadRequest,
+  dataFiles: Array<PayloadFileRequest> | PayloadFileRequest,
+  elapsedMs: number
+): Promise<EncryptionOperation | Response> => {
   // 6️⃣ Registrar operación masiva
   try {
     const doc = await req.payload.create({
@@ -11,9 +16,9 @@ export const createEncryptionResult = async (req: PayloadRequest, dataFiles: Arr
       data: {
         tenant_id: req.user?.id as string,
         operation_type: 'encrypt',
-        file_count: dataFiles.length,
-        total_size_mb: bytesToMB(dataFiles.reduce((sum, f) => sum + f.size, 0)),
-        file_types: dataFiles.map((f) => f.name.split('.').pop()?.toLowerCase()),
+        file_count: Array.isArray(dataFiles) ? dataFiles.length : 1,
+        total_size_mb: bytesToMB(Array.isArray(dataFiles) ? dataFiles.reduce((sum, f) => sum + f.size, 0) : dataFiles.size),
+        file_types: Array.isArray(dataFiles) ? dataFiles.map((f) => f.name.split('.').pop()?.toLowerCase()) : [dataFiles.name.split('.').pop()?.toLowerCase()],
         processing_time_ms: elapsedMs,
         encryption_method: 'AES-256-GCM',
         success: true,
@@ -21,8 +26,7 @@ export const createEncryptionResult = async (req: PayloadRequest, dataFiles: Arr
       }
     });
     return doc;
-  } catch (error: any) {
-    console.error('Error en la creación de registro de encriptación masiva: ', error.message);
-    throw new Error('DB_CREATE_ENCRYPTION_OPERATION_FAILED');
+  } catch (error: unknown) {
+    return handleError(error, 'Error en la creación de registro de encriptación masiva', 'encrypt');
   }
 };

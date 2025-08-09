@@ -46,6 +46,8 @@ const EXTENSION_BLACKLIST = new Set([
   'apk',
   'app',
   'dmg',
+  // tipo desconocido
+  'unknown'
 ]);
 
 async function detectFileTypeFromBlob(data: Uint8Array | Buffer<ArrayBufferLike> | undefined, fileName: string | undefined): Promise<{ extension: string; mimeType: string }> {
@@ -78,10 +80,8 @@ async function detectFileTypeFromBlob(data: Uint8Array | Buffer<ArrayBufferLike>
       return { extension: 'html', mimeType: 'text/html' };
     // añade aquí más casos:
     default:
-      break;
+      return { extension: 'unknown', mimeType: 'text/unknown' };
   }
-
-  throw new Error('Tipo de archivo desconocido o no soportado');
 }
 
 export async function isAllowedFile(

@@ -17,7 +17,7 @@ export const SALT_LEN: number = 16;
 export const IV_LEN: number = 12;
 export const TAG_LEN = 16;
 
-export async function encryptFileGCM(buffer: ArrayBuffer, password: string, name: string): Promise<EncryptionResult> {
+async function encryptFileGCM(buffer: ArrayBuffer, password: string, name: string): Promise<EncryptionResult> {
   // 1️⃣ Derivar clave
   const salt = randomBytes(SALT_LEN);
   const iv = randomBytes(IV_LEN);
@@ -91,4 +91,14 @@ export const massiveEncryption = async (
   // Finaliza el zip
   archive.finalize();
   return { zipStream: zipStream as unknown as ReadableStream<Uint8Array>, elapsedMs };
+};
+
+export const singleEncryption = async (file: PayloadFileRequest, password: string): Promise<{ fileName: string; blob: ArrayBuffer; elapsedMs: number }> => {
+  // 5️⃣ Cifrar archivo y devolver el tiempo de encriptación
+  const start = performance.now(); // ⏱️ inicio del cronómetro
+  const { fileName, blob } = await encryptFileGCM(file.data as unknown as ArrayBuffer, password, file.name);
+  const end = performance.now(); // ⏱️ fin del cronómetro
+  const elapsedMs = end - start;
+
+  return { fileName, blob: blob as unknown as ArrayBuffer, elapsedMs };
 };

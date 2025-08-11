@@ -3,21 +3,10 @@ import { randomBytes, scryptSync, createCipheriv, createDecipheriv } from 'crypt
 import archiver from 'archiver';
 import { PassThrough } from 'stream';
 import { performance } from 'perf_hooks';
-import type { PayloadFileRequest } from '@/utils/http/requestProcesses';
+import { PayloadFileRequest, EncryptionResult, DecryptionResult, SCRYPT, SALT_LEN, IV_LEN, TAG_LEN, MassiveEncryptionResult } from '@/custom-types';
+import { toArrayBuffer } from './converter';
 
-export interface EncryptionResult {
-  fileName: string;
-  blob: Uint8Array; // salt|iv|tag|ciphertext
-  salt: Uint8Array;
-  iv: Uint8Array;
-}
-
-const SCRYPT = { N: 1 << 15, r: 8, p: 1, keyLen: 32, maxmem: 64 * 1024 * 1024 };
-export const SALT_LEN: number = 16;
-export const IV_LEN: number = 12;
-export const TAG_LEN = 16;
-
-async function encryptFileGCM(buffer: ArrayBuffer, password: string, name: string): Promise<EncryptionResult> {
+function encryptFileGCM(buffer: ArrayBuffer, password: string, name: string): EncryptionResult {
   // 1️⃣ Derivar clave
   const salt = randomBytes(SALT_LEN);
   const iv = randomBytes(IV_LEN);
@@ -32,7 +21,7 @@ async function encryptFileGCM(buffer: ArrayBuffer, password: string, name: strin
   return { fileName: `${name}.enc`, blob, salt, iv };
 }
 
-export async function decryptFileGCM(buffer: ArrayBuffer, password: string, name: string): Promise<EncryptionResult> {
+function decryptFileGCM(buffer: ArrayBuffer, password: string, name: string): EncryptionResult {
   // 1. Reconstituir Buffer
   const buf = Buffer.from(buffer);
 
@@ -61,10 +50,7 @@ export async function decryptFileGCM(buffer: ArrayBuffer, password: string, name
   };
 }
 
-export const massiveEncryption = async (
-  dataFiles: Array<PayloadFileRequest>,
-  pwMap: Map<string, string>
-): Promise<{ zipStream: ReadableStream<Uint8Array>; elapsedMs: number }> => {
+export const massiveEncryption = async (dataFiles: Array<PayloadFileRequest>, pwMap: Map<string, string>): Promise<MassiveEncryptionResult> => {
   // 5️⃣ Cifrar todos y enviar zip
   const start = performance.now(); // ⏱️ inicio del cronómetro
   const zipStream = new PassThrough(); // stream de salida
@@ -76,7 +62,7 @@ export const massiveEncryption = async (
   for (let i = 0; i < totalFiles; i++) {
     const file = dataFiles[i];
     const pwd = (pwMap as Map<string, string>).get(file.name)!;
-    const { fileName, blob } = await encryptFileGCM(file.data as unknown as ArrayBuffer, pwd, file.name);
+    const { fileName, blob } = encryptFileGCM(file.data as unknown as ArrayBuffer, pwd, file.name);
     const percent = ((i + 1) / totalFiles) * 100;
     const percentFormatted = percent.toFixed(2).padStart(6, ' ');
     process.stdout.write(`\r🛠️ Encriptando ${i + 1} de ${totalFiles} | Completado: ${percentFormatted}%`);
@@ -93,12 +79,19 @@ export const massiveEncryption = async (
   return { zipStream: zipStream as unknown as ReadableStream<Uint8Array>, elapsedMs };
 };
 
-export const singleEncryption = async (file: PayloadFileRequest, password: string): Promise<{ fileName: string; blob: ArrayBuffer; elapsedMs: number }> => {
+export const singleEncryption = (file: PayloadFileRequest, password: string): DecryptionResult => {
   // 5️⃣ Cifrar archivo y devolver el tiempo de encriptación
   const start = performance.now(); // ⏱️ inicio del cronómetro
-  const { fileName, blob } = await encryptFileGCM(file.data as unknown as ArrayBuffer, password, file.name);
+  const arrayBuffer = toArrayBuffer(file.data);
+  const { fileName, blob } = encryptFileGCM(arrayBuffer, password, file.name);
   const end = performance.now(); // ⏱️ fin del cronómetro
   const elapsedMs = end - start;
 
   return { fileName, blob: blob as unknown as ArrayBuffer, elapsedMs };
+};
+
+export const singleDecryption = (file: ArrayBuffer | Buffer<ArrayBufferLike>, password: string | undefined, name: string): EncryptionResult => {
+  const arrayBuffer = toArrayBuffer(file);
+  const { fileName, blob } = decryptFileGCM(arrayBuffer, password!, name);
+  return { fileName, blob };
 };

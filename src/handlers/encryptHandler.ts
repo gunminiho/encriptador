@@ -1,9 +1,8 @@
 import { singleEncryption } from '@/utils/data_processing/encryption';
 import { PayloadRequest } from 'payload';
 import { fileResponse, handleError } from '@/utils/http/response';
-
 import { isValidUser } from '@/utils/http/auth';
-import { getSingleRequestData, PayloadFileRequest } from '@/utils/http/requestProcesses';
+import { getSingleRequestData } from '@/utils/http/requestProcesses';
 import { validateSingleRequest } from '@/utils/http/requestValidator';
 import { createEncryptionResult } from '@/controllers/encryptionController';
 
@@ -22,13 +21,13 @@ export const encryptHandler = async (req: PayloadRequest): Promise<Response> => 
     if (validRequest instanceof Response) return validRequest;
 
     // 4️⃣ Cifrar todos los archivos: devuelve zip y tiempo de procesamiento
-    const { fileName, blob, elapsedMs } = file && password ? await singleEncryption(file, password) : { fileName: '', blob: new ArrayBuffer(0), elapsedMs: 0 };
+    const { fileName, blob, elapsedMs } = singleEncryption(file, password);
 
-    // 5️⃣ Cifrar todos los archivos: devuelve zip y tiempo de procesamiento
-    const docResult = await createEncryptionResult(req, file as PayloadFileRequest, elapsedMs);
+    // 5️⃣ Registrar operación masiva
+    const docResult = await createEncryptionResult(req, file, elapsedMs);
     if (docResult instanceof Response) return docResult;
 
-    // 6️⃣ Registrar operación masiva
+    // 6️⃣ devolver el archivo cifrado
     return fileResponse(blob, fileName);
   } catch (error: unknown) {
     return handleError(error, 'Error interno del servidor', 'encrypt');

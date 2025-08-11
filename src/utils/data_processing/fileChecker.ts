@@ -1,54 +1,6 @@
 import { fileTypeFromBuffer } from 'file-type';
-import { SALT_LEN, IV_LEN, TAG_LEN } from '@/utils/data_processing/encryption';
-
+import { SALT_LEN, IV_LEN, TAG_LEN, EXTENSION_BLACKLIST } from '@/custom-types';
 import path from 'path';
-
-const EXTENSION_BLACKLIST = new Set([
-  // Windows executables / instaladores
-  'exe',
-  'msi',
-  'msp',
-  'bat',
-  'cmd',
-  'com',
-  'pif',
-  'scr',
-  'cpl',
-  'msc',
-  // Scripts y macros
-  'js',
-  'jse',
-  'vbs',
-  'vbe',
-  'wsf',
-  'wsh',
-  'hta',
-  'ps1',
-  'psm1',
-  // Lenguajes interpretados / bytecode
-  'py',
-  'pyc',
-  'rb',
-  'pl',
-  'php',
-  'jar',
-  // Librerías y módulos
-  'dll',
-  'so',
-  'dylib',
-  // Paquetes / contenedores que pueden ocultar código
-  'zip',
-  'rar',
-  '7z',
-  'tar',
-  'gz',
-  'bz2',
-  'apk',
-  'app',
-  'dmg',
-  // tipo desconocido
-  'unknown'
-]);
 
 async function detectFileTypeFromBlob(data: Uint8Array | Buffer<ArrayBufferLike> | undefined, fileName: string | undefined): Promise<{ extension: string; mimeType: string }> {
   // 1️⃣ Intento magic-number

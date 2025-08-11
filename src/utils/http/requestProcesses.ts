@@ -1,31 +1,9 @@
 import { PayloadRequest, addDataAndFileToRequest } from 'payload';
 import Busboy from 'busboy';
 import { toNodeReadable } from '../data_processing/converter';
+import type { PayloadFileRequest, MassiveEncryptionRequest, SingleEncryptionRequest } from '@/custom-types';
 
-export type PayloadFileRequest = {
-  /**
-   * Context of the file when it was uploaded via client side.
-   */
-  clientUploadContext?: unknown;
-  data: Buffer;
-  mimetype: string;
-  name: string;
-  size: number;
-  tempFilePath?: string;
-  fieldName?: string;
-};
-
-export type MassiveEncryptionRequest = {
-  csvFile: PayloadFileRequest;
-  dataFiles: Array<PayloadFileRequest>;
-};
-
-export type SingleEncryptionRequest = {
-  file?: PayloadFileRequest;
-  password?: string;
-};
-
-export const getRequestData = async (req: PayloadRequest, errors: Array<string>): Promise<MassiveEncryptionRequest | void> => {
+export const getRequestData = async (req: PayloadRequest, errors: Array<string>): Promise<MassiveEncryptionRequest> => {
   try {
     //Multipart → files + CSV
     await addDataAndFileToRequest(req);
@@ -34,13 +12,11 @@ export const getRequestData = async (req: PayloadRequest, errors: Array<string>)
     const csvFile = allFiles.find((f) => f.name === 'passwords.csv');
     const dataFiles = allFiles.filter((f) => f.name !== 'passwords.csv');
     if (!csvFile) errors.push('No se encontró passwords.csv');
-    const response: MassiveEncryptionRequest = {
-      csvFile,
-      dataFiles
-    };
-    return response;
-  } catch (error: any) {
-    console.error('Hubo un error para esta petición al extraer los archivos desde formData: ' + error.message);
+
+    return { csvFile, dataFiles };
+  } catch (error: unknown) {
+    console.error('Hubo un error para esta petición al extraer los archivos desde formData: ' + (error as Error).message);
+    throw new Error('Hubo un error para esta petición al extraer los archivos desde formData: ' + (error as Error).message);
   }
 };
 
@@ -61,8 +37,16 @@ export const getSingleRequestData = async (req: PayloadRequest): Promise<SingleE
       limits: { files: 2, fileSize: 20 * 1024 * 1024 } // 20MB
     });
 
-    let password: string | undefined;
-    let file_req: PayloadFileRequest | undefined;
+    let password: string = '';
+    let file_req: PayloadFileRequest = {
+      clientUploadContext: undefined,
+      data: Buffer.alloc(0),
+      mimetype: '',
+      name: '',
+      size: 0,
+      tempFilePath: undefined,
+      fieldName: undefined
+    };
 
     bb.on('field', (name, val) => {
       if (name === 'password') password = val;
@@ -85,8 +69,6 @@ export const getSingleRequestData = async (req: PayloadRequest): Promise<SingleE
     });
 
     bb.on('close', () => {
-      if (!file_req) file_req = undefined;
-      if (!password) password = undefined;
       resolve({ file: file_req, password });
     });
 

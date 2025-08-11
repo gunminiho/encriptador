@@ -1,8 +1,5 @@
-type BinaryLike =
-  | ArrayBuffer
-  | ArrayBufferView // Uint8Array, DataView, Buffer, etc.
-  | Blob
-  | ReadableStream<Uint8Array>;
+import type { BinaryLike } from '@/custom-types';
+import { toError } from '../data_processing/converter';
 
 export function response(status: number, data?: unknown, message?: string, headers?: Record<string, string>): Response {
   let normalizedData = data;
@@ -92,13 +89,4 @@ export function handleError(e: unknown, responseMessage: string, endpoint: strin
 
   // Respuesta estándar al cliente (no filtrar stack)
   return response(status, { error: responseMessage }, status === 500 ? 'Internal Server Error' : 'Request Error');
-}
-
-function toError(e: unknown): Error {
-  if (e instanceof Error) return e;
-  try {
-    return new Error(typeof e === 'string' ? e : JSON.stringify(e));
-  } catch {
-    return new Error('Unknown error');
-  }
 }

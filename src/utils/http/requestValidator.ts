@@ -1,10 +1,8 @@
 import { response, handleError } from '@/utils/http/response';
-import { MassiveEncryptionRequest } from '../http/requestProcesses';
+import type { MassiveEncryptionRequest, SingleEncryptionRequest } from '@/custom-types';
 import { isAllowedFile } from '../data_processing/fileChecker';
-import { SingleEncryptionRequest } from '../http/requestProcesses';
 
-export const validateMassiveRequest = async (massiveData: MassiveEncryptionRequest, pwMap: Map<string, string> | string, errors: Array<string>): Promise<Response | void> => {
-  // 4️⃣ Validaciones: que cada archivo tenga password, etc
+export const validateMassiveRequest = async (massiveData: MassiveEncryptionRequest, pwMap: Map<string, string>, errors: Array<string>): Promise<Response | void> => {
   try {
     const { dataFiles } = massiveData;
     const missing = pwMap instanceof Map ? dataFiles.filter((f) => !pwMap.has(f.name)) : [];

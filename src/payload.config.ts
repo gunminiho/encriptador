@@ -19,6 +19,12 @@ const dirname = path.dirname(filename);
 
 
 export default buildConfig({
+  onInit: async (payload) => {
+    // Aquí puedes realizar acciones al inicializar Payload
+    console.log('Payload inicializado');
+    console.log(process.env.PAYLOAD_SECRET || 'No se ha configurado PAYLOAD_SECRET');
+    console.log(process.env.DATABASE_URI || 'No se ha configurado DATABASE_URI');
+  },
   cors: '*',
   // upload: {
   //   tempFileDir : TEMP_PATH,

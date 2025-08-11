@@ -1,5 +1,5 @@
 import type { PayloadRequest } from 'payload';
-import type { PayloadFileRequest } from '@/utils/http/requestProcesses';
+import type { PayloadFileRequest } from '@/custom-types';
 import { EncryptionOperation } from '@/payload-types';
 import { bytesToMB } from '@/utils/data_processing/converter';
 import { handleError } from '@/utils/http/response';
@@ -9,7 +9,6 @@ export const createEncryptionResult = async (
   dataFiles: Array<PayloadFileRequest> | PayloadFileRequest,
   elapsedMs: number
 ): Promise<EncryptionOperation | Response> => {
-  // 6️⃣ Registrar operación masiva
   try {
     const doc = await req.payload.create({
       collection: 'encryption_operations',

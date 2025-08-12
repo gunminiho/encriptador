@@ -13,40 +13,22 @@ import { Tenants } from './collections/Tenant';
 import { EncryptionOperations } from '@/collections/EncryptationOperation';
 import { ResourceUsageDaily } from '@/collections/ResourcesUsage';
 import { ErrorLogs } from '@/collections/ErrorLog';
+import { Payload } from 'payload';
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
 
-
 export default buildConfig({
-  onInit: async (payload) => {
+  onInit: async (payload: Payload) => {
     // Aquí puedes realizar acciones al inicializar Payload
-    console.log('Payload inicializado');
-    console.log(process.env.PAYLOAD_SECRET || 'No se ha configurado PAYLOAD_SECRET');
-    console.log(process.env.DATABASE_URI || 'No se ha configurado DATABASE_URI');
+    console.log('Servidor de Payload iniciado en: ', payload.config);
   },
   cors: '*',
-  // upload: {
-  //   tempFileDir : TEMP_PATH,
-  //   useTempFiles: true,
-  //   limits:{
-  //     fileSize: 25 * 1024 * 1024 // 25MB
-  //   }
-  //   // staticURL: '/uploads',        // no es admitido en v2
-  //   // Puedes configurar limits, transform, etc. aquí
-  // },
   admin: {
     user: Users.slug,
     importMap: {
       baseDir: path.resolve(dirname)
     }
-    // components:{
-    //   views: {
-    //     dashboard : {
-    //       Component : '../test.html'
-    //     }
-    //   }
-    // }
   },
   collections: [Users, Media, Tenants, EncryptionOperations, ResourceUsageDaily, ErrorLogs],
   editor: lexicalEditor(),

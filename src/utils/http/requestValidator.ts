@@ -11,7 +11,7 @@ export const validateMassiveRequest = async (massiveData: MassiveEncryptionReque
       if (!allowed) errors.push(`el tipo de archivo .${extension} o mime-type ${mimeType} no esta permitido.`);
     }
     if (dataFiles.length < 2) errors.push('Se necesitan ≥2 archivos para encriptación masiva');
-    if (dataFiles.length > 1000) errors.push('Solo se pueden enviar 1000 archivos por petición para encriptar');
+    //if (dataFiles.length > 1000) errors.push('Solo se pueden enviar 1000 archivos por petición para encriptar');
     if (missing.length > 0) errors.push(`Faltan passwords para: ${missing.map((f) => f.name).join(',')}`);
     if (errors.length > 0) return response(400, { error: errors }, 'Bad Request');
   } catch (error: unknown) {

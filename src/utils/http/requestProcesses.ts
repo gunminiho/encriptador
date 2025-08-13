@@ -12,7 +12,7 @@ export const getRequestData = async (req: PayloadRequest, errors: Array<string>)
     const csvFile = allFiles.find((f) => f.name === 'passwords.csv');
     const dataFiles = allFiles.filter((f) => f.name !== 'passwords.csv');
     if (!csvFile) errors.push('No se encontró passwords.csv');
-
+    
     return { csvFile, dataFiles };
   } catch (error: unknown) {
     console.error('Hubo un error para esta petición al extraer los archivos desde formData: ' + (error as Error).message);

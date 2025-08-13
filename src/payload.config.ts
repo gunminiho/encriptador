@@ -13,15 +13,14 @@ import { Tenants } from './collections/Tenant';
 import { EncryptionOperations } from '@/collections/EncryptationOperation';
 import { ResourceUsageDaily } from '@/collections/ResourcesUsage';
 import { ErrorLogs } from '@/collections/ErrorLog';
-import { Payload } from 'payload';
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
 
 export default buildConfig({
-  onInit: async (payload: Payload) => {
+  onInit: async () => {
     // Aquí puedes realizar acciones al inicializar Payload
-    console.log('Servidor de Payload iniciado en: ', payload.config);
+    console.log('Servidor de Payload iniciado');
   },
   cors: '*',
   admin: {

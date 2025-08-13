@@ -34,7 +34,7 @@ export const getSingleRequestData = async (req: PayloadRequest): Promise<SingleE
   return new Promise((resolve, reject) => {
     const bb = Busboy({
       headers: { 'content-type': ct },
-      limits: { files: 2, fileSize: 20 * 1024 * 1024 } // 20MB
+      limits: { files: 1, fileSize: parseInt(process.env.FILE_SIZE_LIMIT as string) * 1024 * 1024 } // Tamaño definido en .env
     });
 
     let password: string = '';
@@ -55,7 +55,7 @@ export const getSingleRequestData = async (req: PayloadRequest): Promise<SingleE
     bb.on('file', (name, file, info) => {
       const chunks: Buffer[] = [];
       file.on('data', (d: Buffer) => chunks.push(d));
-      file.on('limit', () => reject(new Error('El archivo excede el tamaño permitido')));
+      file.on('limit', () => reject(new Error('El archivo excede el tamaño permitido: ' + process.env.FILE_SIZE_LIMIT + 'MB')));
       file.on('end', () => {
         const data = Buffer.concat(chunks);
         file_req = {

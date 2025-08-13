@@ -83,9 +83,11 @@ export const singleEncryption = (file: PayloadFileRequest, password: string): De
   // 5️⃣ Cifrar archivo y devolver el tiempo de encriptación
   const start = performance.now(); // ⏱️ inicio del cronómetro
   const arrayBuffer = toArrayBuffer(file.data);
+  process.stdout.write(`\r🛠️ Encriptando ${file.name} con ${password} | %`);
   const { fileName, blob } = encryptFileGCM(arrayBuffer, password, file.name);
   const end = performance.now(); // ⏱️ fin del cronómetro
   const elapsedMs = end - start;
+  console.log(`\n✅ Encriptación completada en ${(elapsedMs / 1000).toFixed(2)} segundos.`);
 
   return { fileName, blob: blob as unknown as ArrayBuffer, elapsedMs };
 };

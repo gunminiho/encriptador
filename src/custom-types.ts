@@ -1,3 +1,5 @@
+import type { Readable } from 'node:stream';
+
 export type PayloadFileRequest = {
   /**
    * Context of the file when it was uploaded via client side.
@@ -229,3 +231,22 @@ export const words = [
   'huerto',
   'melodía'
 ];
+
+export type FileEntryStream = {
+  fieldname: string;
+  filename: string;
+  mimetype: string;
+  stream: Readable;
+  knownLength?: number;
+};
+
+export type PasswordMap = Map<string, string>; // file_name -> password
+
+export type ZipManifestRecord = {
+  file_name: string;
+  size_bytes: number;
+  salt_b64: string;
+  iv_b64: string;
+  tag_b64: string;
+  error?: string;
+};

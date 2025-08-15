@@ -3,14 +3,18 @@ import { randomBytes, scryptSync, createCipheriv, createDecipheriv } from 'crypt
 import archiver from 'archiver';
 import { PassThrough } from 'stream';
 import { performance } from 'perf_hooks';
-import { PayloadFileRequest, EncryptionResult, DecryptionResult, SCRYPT, SALT_LEN, IV_LEN, TAG_LEN, MassiveEncryptionResult } from '@/custom-types';
+import { PayloadFileRequest, EncryptionResult, DecryptionResult, HWM, keyLen, SCRYPT, SALT_LEN, IV_LEN, TAG_LEN, MassiveEncryptionResult } from '@/custom-types';
 import { toArrayBuffer } from './converter';
+import { readExactlyHeader, HoldbackTransform } from './validator';
+import { type Readable as NodeReadable, Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { scryptAsync } from '@/utils/data_processing/trafficController';
 
 function encryptFileGCM(buffer: ArrayBuffer, password: string, name: string): EncryptionResult {
   // 1️⃣ Derivar clave
   const salt = randomBytes(SALT_LEN);
   const iv = randomBytes(IV_LEN);
-  const key = scryptSync(password, salt, SCRYPT.keyLen, SCRYPT);
+  const key = scryptSync(password, salt, keyLen, SCRYPT);
 
   // 2️⃣ Cifar archivo
   const cipher = createCipheriv('aes-256-gcm', key, iv);
@@ -32,7 +36,7 @@ function decryptFileGCM(buffer: ArrayBuffer, password: string, name: string): En
   const ciphertext = buf.slice(SALT_LEN + IV_LEN + TAG_LEN);
 
   // 3. Derivar key
-  const key = scryptSync(password, salt, SCRYPT.keyLen, SCRYPT);
+  const key = scryptSync(password, salt, keyLen, SCRYPT);
 
   // 4. Desencriptar
   const decipher = createDecipheriv('aes-256-gcm', key, iv);
@@ -98,67 +102,73 @@ export const singleDecryption = (file: ArrayBuffer | Buffer<ArrayBufferLike>, pa
   return { fileName, blob };
 };
 
-export function decryptFileGCMv2(buffer: ArrayBuffer, password: string, name: string) {
-  const buf = Buffer.from(buffer);
-  if (buf.length < SALT_LEN + IV_LEN + TAG_LEN + 1) {
-    throw new Error(`enc_too_short:${buf.length}`);
-  }
+export function decryptStreamGCM(input: NodeReadable, password: string) {
+  const out = new PassThrough({ highWaterMark: HWM });
 
-  const salt = buf.subarray(0, SALT_LEN);
-  const iv = buf.subarray(SALT_LEN, SALT_LEN + IV_LEN);
+  const metaPromise = (async () => {
+    // 1) leer [salt+iv]
+    const { header, rest } = await readExactlyHeader(input, SALT_LEN + IV_LEN);
+    const salt = header.subarray(0, SALT_LEN);
+    const iv = header.subarray(SALT_LEN);
 
-  const key = scryptSync(password, salt, SCRYPT.keyLen, SCRYPT);
+    // 2) clave
+    const key = await scryptAsync(password, salt, keyLen, SCRYPT);
+    const decipher = createDecipheriv('aes-256-gcm', key, iv, { authTagLength: TAG_LEN });
 
-  // Intento A: formato streaming [salt][iv][ciphertext][tag]
-  const trailerTag = buf.subarray(buf.length - TAG_LEN);
-  const trailerCipher = buf.subarray(SALT_LEN + IV_LEN, buf.length - TAG_LEN);
+    // 3) retén el tag final
+    const hold = new HoldbackTransform(TAG_LEN);
 
-  const tryTrailer = () => {
-    const d = createDecipheriv('aes-256-gcm', key, iv);
-    d.setAuthTag(trailerTag);
-    return Buffer.concat([d.update(trailerCipher), d.final()]);
-  };
+    rest.pipe(hold);
+    hold.pipe(decipher, { end: false });
+    decipher.pipe(out);
 
-  // Intento B: formato antiguo [salt][iv][tag][ciphertext]
-  const headerTag = buf.subarray(SALT_LEN + IV_LEN, SALT_LEN + IV_LEN + TAG_LEN);
-  const headerCipher = buf.subarray(SALT_LEN + IV_LEN + TAG_LEN);
+    const tag: Buffer = await new Promise((resolve, reject) => {
+      (hold as any).once('trailer', (t: Buffer) => resolve(t));
+      hold.once('error', reject);
+    });
 
-  const tryHeader = () => {
-    const d = createDecipheriv('aes-256-gcm', key, iv);
-    d.setAuthTag(headerTag);
-    return Buffer.concat([d.update(headerCipher), d.final()]);
-  };
+    decipher.setAuthTag(tag);
+    decipher.end();
 
-  let plain: Buffer | null = null;
-  try {
-    plain = tryTrailer();
-  } catch (e1) {
-    try {
-      plain = tryHeader();
-    } catch (e2) {
-      // Logs útiles para depurar
-      const dbg = {
-        total: buf.length,
-        saltHex: salt.toString('hex'),
-        ivHex: iv.toString('hex'),
-        tagTrailerHex: trailerTag.toString('hex').slice(0, 16) + '…',
-        tagHeaderHex: headerTag.toString('hex').slice(0, 16) + '…',
-        scrypt: SCRYPT
-      };
-      console.error('[decrypt] auth_failed', dbg);
-      // Mensaje claro para el cliente
-      const err = new Error('auth_failed: wrong password or corrupted/unsupported .enc');
-      (err as any).debug = dbg;
-      throw err;
-    }
-  }
+    return { salt, iv, tag };
+  })().catch((err) => {
+    out.destroy(err);
+    throw err;
+  });
 
-  const originalName = name.replace(/\.enc$/i, '') || name;
-  return { fileName: originalName, blob: new Uint8Array(plain!), salt, iv };
+  return { output: out, metaPromise };
 }
 
-// Wrapper idéntico al tuyo
-export const singleDecryptionv2 = (file: ArrayBuffer | Buffer<ArrayBufferLike>, password: string | undefined, name: string) => {
-  const ab = toArrayBuffer(file);
-  return decryptFileGCMv2(ab, password!, name);
-};
+export function encryptStreamGCM(input: NodeReadable, password: string) {
+  const salt = randomBytes(SALT_LEN);
+  const iv = randomBytes(IV_LEN);
+
+  let plainSize = 0;
+  const count = new Transform({
+    transform(chunk, _enc, cb) {
+      plainSize += (chunk as Buffer).length;
+      cb(null, chunk);
+    }
+  });
+
+  const out = new PassThrough({ highWaterMark: HWM });
+
+  const metaPromise = (async () => {
+    const key = await scryptAsync(password, salt, keyLen, SCRYPT);
+    const cipher = createCipheriv('aes-256-gcm', key, iv, { authTagLength: TAG_LEN });
+
+    // header
+    out.write(salt);
+    out.write(iv);
+
+    cipher.pipe(out, { end: false });
+    await pipeline(input, count, cipher);
+
+    const tag = cipher.getAuthTag();
+    out.end(tag);
+
+    return { size: plainSize, salt, iv, tag };
+  })();
+
+  return { output: out, metaPromise };
+}

@@ -1,5 +1,5 @@
 import { fileTypeFromBuffer } from 'file-type';
-import {SALT_LEN, IV_LEN, TAG_LEN, EXTENSION_BLACKLIST } from '@/custom-types';
+import { SALT_LEN, IV_LEN, TAG_LEN, EXTENSION_BLACKLIST } from '@/custom-types';
 import path from 'path';
 //,
 
@@ -25,9 +25,9 @@ async function detectFileTypeFromBlob(data: Uint8Array | Buffer<ArrayBufferLike>
       return { extension: 'xlsx', mimeType: 'text/text+xml' };
     case 'enc':
       //Validación mínima para un .enc
-      if (data && data.byteLength < SALT_LEN + IV_LEN + TAG_LEN) {
-        throw new Error('Archivo .enc demasiado pequeño para ser válido');
-      }
+      // if (data && data.byteLength < SALT_LEN + IV_LEN + TAG_LEN) {
+      //   throw new Error('Archivo .enc demasiado pequeño para ser válido');
+      // }
       return { extension: 'enc', mimeType: 'application/octet-stream' };
     case 'html':
       return { extension: 'html', mimeType: 'text/html' };

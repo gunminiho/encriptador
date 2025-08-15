@@ -1,4 +1,4 @@
-import type { Readable } from 'node:stream';
+import { ScryptOptions } from 'node:crypto';
 
 export type PayloadFileRequest = {
   /**
@@ -49,10 +49,14 @@ export interface DecryptionResult {
   elapsedMs: number;
 }
 
-export const SCRYPT = { N: 1 << 15, r: 8, p: 1, keyLen: 32, maxmem: 64 * 1024 * 1024 };
-export const SALT_LEN = 16 as const;  // 128 bits
-export const IV_LEN   = 12 as const;  // 96 bits (recomendado para GCM)
-export const TAG_LEN  = 16 as const;  // 128 bits
+export const HWM = 1024 * 1024; // 1 MiB para todos los PassThrough (buen throughput)
+export const CONCURRENCY = 8; // tareas de cifrado en paralelo (ajusta según CPU)
+export const SALT_LEN = 16; // 128-bit
+export const IV_LEN = 12; // 96-bit (recomendado para GCM)
+export const TAG_LEN = 16; // 128-bit
+export const keyLen = 32; // 256-bit
+export const SCRYPT: ScryptOptions = { N: 1 << 14, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
+export const ZIP_LOG_STEP = 5 * 1024 * 1024;
 
 export const EXTENSION_BLACKLIST = new Set([
   // Windows executables / instaladores
@@ -66,6 +70,9 @@ export const EXTENSION_BLACKLIST = new Set([
   'scr',
   'cpl',
   'msc',
+  'sh',
+  'cmd',
+  'htm',
   // Scripts y macros
   'js',
   'jse',
@@ -101,146 +108,11 @@ export const EXTENSION_BLACKLIST = new Set([
   'unknown'
 ]);
 
-export const words = [
-  'cielo',
-  'gato',
-  'sol',
-  'tren',
-  'luna',
-  'verde',
-  'flor',
-  'río',
-  'nube',
-  'mar',
-  'fuego',
-  'campo',
-  'piedra',
-  'frío',
-  'arena',
-  'perro',
-  'café',
-  'rojo',
-  'roca',
-  'nieve',
-  'casa',
-  'bosque',
-  'viento',
-  'canción',
-  'montaña',
-  'rayo',
-  'laguna',
-  'estrella',
-  'libro',
-  'noche',
-  'puente',
-  'jardín',
-  'hoja',
-  'rastro',
-  'silencio',
-  'camino',
-  'risa',
-  'tarde',
-  'barco',
-  'sal',
-  'lago',
-  'metal',
-  'lluvia',
-  'oro',
-  'hierro',
-  'cuerda',
-  'pluma',
-  'palma',
-  'caracol',
-  'pájaro',
-  'madera',
-  'vela',
-  'cuerda',
-  'puerta',
-  'piedra',
-  'humo',
-  'árbol',
-  'llama',
-  'faro',
-  'pan',
-  'vino',
-  'aceite',
-  'gota',
-  'arena',
-  'marea',
-  'brisa',
-  'nido',
-  'puerto',
-  'isla',
-  'cosecha',
-  'mundo',
-  'llanura',
-  'pescador',
-  'nave',
-  'tormenta',
-  'orilla',
-  'acero',
-  'acantilado',
-  'flamenco',
-  'cascada',
-  'guitarra',
-  'ladrillo',
-  'mirada',
-  'trigo',
-  'sombra',
-  'luz',
-  'fresco',
-  'cobre',
-  'alba',
-  'crepúsculo',
-  'poema',
-  'canto',
-  'espiga',
-  'colina',
-  'campana',
-  'lucero',
-  'techo',
-  'pared',
-  'sabana',
-  'valle',
-  'astro',
-  'muralla',
-  'parque',
-  'puñado',
-  'finca',
-  'molino',
-  'charco',
-  'río',
-  'avenida',
-  'lienzo',
-  'cántaro',
-  'farol',
-  'ancla',
-  'zafiro',
-  'pasto',
-  'coral',
-  'marfil',
-  'loto',
-  'sierra',
-  'florero',
-  'barro',
-  'arena',
-  'ladera',
-  'bisagra',
-  'horizonte',
-  'planicie',
-  'huerto',
-  'melodía'
-];
+export type PasswordMap = Map<string, string>;
 
-export type FileEntryStream = {
-  fieldname: string;
-  filename: string;
-  mimetype: string;
-  stream: Readable;
-  knownLength?: number;
-};
+export type FileEntryStream = { fieldname: string; filename: string; mimetype: string; stream: NodeReadable; tmpPath?: string };
 
-export type PasswordMap = Map<string, string>; // file_name -> password
+export type GcmMeta = { salt: Buffer; iv: Buffer; tag: Buffer; size: number };
 
 export type ZipManifestRecord = {
   file_name: string;
@@ -250,3 +122,8 @@ export type ZipManifestRecord = {
   tag_b64: string;
   error?: string;
 };
+
+export type FileStatus = { file: string; status: 'ok'; size: number } | { file: string; status: 'missing_password' } | { file: string; status: 'error'; message: string };
+
+
+export type NodeReadable = NodeJS.ReadableStream;

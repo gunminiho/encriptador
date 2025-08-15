@@ -97,3 +97,68 @@ export const singleDecryption = (file: ArrayBuffer | Buffer<ArrayBufferLike>, pa
   const { fileName, blob } = decryptFileGCM(arrayBuffer, password!, name);
   return { fileName, blob };
 };
+
+export function decryptFileGCMv2(buffer: ArrayBuffer, password: string, name: string) {
+  const buf = Buffer.from(buffer);
+  if (buf.length < SALT_LEN + IV_LEN + TAG_LEN + 1) {
+    throw new Error(`enc_too_short:${buf.length}`);
+  }
+
+  const salt = buf.subarray(0, SALT_LEN);
+  const iv = buf.subarray(SALT_LEN, SALT_LEN + IV_LEN);
+
+  const key = scryptSync(password, salt, SCRYPT.keyLen, SCRYPT);
+
+  // Intento A: formato streaming [salt][iv][ciphertext][tag]
+  const trailerTag = buf.subarray(buf.length - TAG_LEN);
+  const trailerCipher = buf.subarray(SALT_LEN + IV_LEN, buf.length - TAG_LEN);
+
+  const tryTrailer = () => {
+    const d = createDecipheriv('aes-256-gcm', key, iv);
+    d.setAuthTag(trailerTag);
+    return Buffer.concat([d.update(trailerCipher), d.final()]);
+  };
+
+  // Intento B: formato antiguo [salt][iv][tag][ciphertext]
+  const headerTag = buf.subarray(SALT_LEN + IV_LEN, SALT_LEN + IV_LEN + TAG_LEN);
+  const headerCipher = buf.subarray(SALT_LEN + IV_LEN + TAG_LEN);
+
+  const tryHeader = () => {
+    const d = createDecipheriv('aes-256-gcm', key, iv);
+    d.setAuthTag(headerTag);
+    return Buffer.concat([d.update(headerCipher), d.final()]);
+  };
+
+  let plain: Buffer | null = null;
+  try {
+    plain = tryTrailer();
+  } catch (e1) {
+    try {
+      plain = tryHeader();
+    } catch (e2) {
+      // Logs útiles para depurar
+      const dbg = {
+        total: buf.length,
+        saltHex: salt.toString('hex'),
+        ivHex: iv.toString('hex'),
+        tagTrailerHex: trailerTag.toString('hex').slice(0, 16) + '…',
+        tagHeaderHex: headerTag.toString('hex').slice(0, 16) + '…',
+        scrypt: SCRYPT
+      };
+      console.error('[decrypt] auth_failed', dbg);
+      // Mensaje claro para el cliente
+      const err = new Error('auth_failed: wrong password or corrupted/unsupported .enc');
+      (err as any).debug = dbg;
+      throw err;
+    }
+  }
+
+  const originalName = name.replace(/\.enc$/i, '') || name;
+  return { fileName: originalName, blob: new Uint8Array(plain!), salt, iv };
+}
+
+// Wrapper idéntico al tuyo
+export const singleDecryptionv2 = (file: ArrayBuffer | Buffer<ArrayBufferLike>, password: string | undefined, name: string) => {
+  const ab = toArrayBuffer(file);
+  return decryptFileGCMv2(ab, password!, name);
+};

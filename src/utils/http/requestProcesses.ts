@@ -34,7 +34,7 @@ export const getSingleRequestData = async (req: PayloadRequest): Promise<SingleE
   return new Promise((resolve, reject) => {
     const bb = Busboy({
       headers: { 'content-type': ct },
-      limits: { files: 1, fileSize: parseInt(process.env.FILE_SIZE_LIMIT as string) * 1024 * 1024 } // Tamaño definido en .env
+      limits: { files: 1, fileSize: 500 * 1024 * 1024 } // Tamaño definido en .env
     });
 
     let password: string = '';

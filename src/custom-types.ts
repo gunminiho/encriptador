@@ -50,9 +50,9 @@ export interface DecryptionResult {
 }
 
 export const SCRYPT = { N: 1 << 15, r: 8, p: 1, keyLen: 32, maxmem: 64 * 1024 * 1024 };
-export const SALT_LEN: number = 16;
-export const IV_LEN: number = 12;
-export const TAG_LEN = 16;
+export const SALT_LEN = 16 as const;  // 128 bits
+export const IV_LEN   = 12 as const;  // 96 bits (recomendado para GCM)
+export const TAG_LEN  = 16 as const;  // 128 bits
 
 export const EXTENSION_BLACKLIST = new Set([
   // Windows executables / instaladores

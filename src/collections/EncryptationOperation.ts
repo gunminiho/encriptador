@@ -3,19 +3,21 @@ import { CollectionConfig } from 'payload';
 import { encryptHandler } from '@/handlers/encryptHandler';
 import { decryptHandler } from '@/handlers/decryptHandler';
 import { massiveEncryptionHandler } from '@/handlers/massiveEncrypt';
+import { massiveEncryptionHandler2 } from '@/handlers/massiveEncryption2';
+import { decryptHandlerv2 } from '@/handlers/decryptHandlerv2';
 
 export const EncryptionOperations: CollectionConfig = {
   slug: 'encryption_operations',
   timestamps: true,
   admin: {
-    useAsTitle: 'operation_title', // ← ahora es texto
-  },  
+    useAsTitle: 'operation_title' // ← ahora es texto
+  },
   fields: [
-     // 1) Título derivado, solo lectura
+    // 1) Título derivado, solo lectura
     {
       name: 'operation_title',
       type: 'text',
-      admin: { readOnly: true },
+      admin: { readOnly: true }
     },
     {
       name: 'tenant_id',
@@ -112,9 +114,9 @@ export const EncryptionOperations: CollectionConfig = {
         const toStr = (v: unknown): string => (typeof v === 'string' ? v : v == null ? '' : String(v));
         const op = toStr(data?.operation_type ?? 'operation');
         const files = Number.isFinite(data?.file_count) ? (data!.file_count as number) : 0;
-        const tsRaw = data?.operation_timestamp ?? new Date().toLocaleString("es-PE");
+        const tsRaw = data?.operation_timestamp ?? new Date().toLocaleString('es-PE');
         const d = tsRaw instanceof Date ? tsRaw : new Date(tsRaw);
-        const when = Number.isNaN(d.getTime()) ? '' : d.toLocaleString("es-PE").replace('T', ' ').substring(0, 19);
+        const when = Number.isNaN(d.getTime()) ? '' : d.toLocaleString('es-PE').replace('T', ' ').substring(0, 19);
         const tenant = toStr(
           typeof data?.tenant_id === 'string'
             ? data.tenant_id
@@ -128,19 +130,29 @@ export const EncryptionOperations: CollectionConfig = {
   },
   endpoints: [
     {
-      path: '/v1/encrypt', // =>   /api/encryption_operations/encrypt
+      path: '/v1/encrypt', // =>   /api/encryption_operations/v1/encrypt
       method: 'post',
       handler: encryptHandler
     },
     {
-      path: '/v1/decrypt', // =>  /api/encryption_operations/decrypt
+      path: '/v1/decrypt', // =>  /api/encryption_operations/v1/decrypt
       method: 'post',
       handler: decryptHandler
     },
     {
-      path: '/v1/massive-encrypt', // =>  /api/encryption_operations/decrypt
+      path: '/v1/massive-encrypt', // =>  /api/encryption_operations/v1/massive-encrypt
       method: 'post',
       handler: massiveEncryptionHandler
+    },
+    {
+      path: '/v2/massive-encrypt', // =>  /api/encryption_operations/v2/massive-encrypt
+      method: 'post',
+      handler: massiveEncryptionHandler2
+    },
+    {
+      path: '/v2/decrypt', // =>  /api/encryption_operations/v2/massive-encrypt
+      method: 'post',
+      handler: decryptHandlerv2
     }
   ]
 };

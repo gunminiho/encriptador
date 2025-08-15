@@ -1,10 +1,11 @@
 // src/collections/EncryptionOperations.ts
 import { CollectionConfig } from 'payload';
-import { encryptHandler } from '@/handlers/encryptHandler';
-import { decryptHandler } from '@/handlers/decryptHandler';
-import { massiveEncryptionHandler } from '@/handlers/massiveEncrypt';
-import { massiveEncryptionHandler2 } from '@/handlers/massiveEncryption2';
-import { decryptHandlerv2 } from '@/handlers/decryptHandlerv2';
+import { encryptHandler } from '@/handlers/v1/encryptHandler';
+import { decryptHandler } from '@/handlers/v1/decryptHandler';
+import { massiveEncryptionHandler } from '@/handlers/v1/massiveEncrypt';
+import { massiveEncryptionHandler2 } from '@/handlers/v2/massiveEncryption2';
+import { decryptSingleStreamHandler } from '@/handlers/v2/decryptHandler2';
+import { encryptSingleStreamHandler } from '@/handlers/v2/encryptHandler2';
 
 export const EncryptionOperations: CollectionConfig = {
   slug: 'encryption_operations',
@@ -81,10 +82,7 @@ export const EncryptionOperations: CollectionConfig = {
       name: 'encryption_method',
       type: 'select',
       label: 'Encryption Method',
-      options: [
-        { value: 'AES-256-GCM', label: 'AES-256-GCM' }
-        // { value: 'RSA-OAEP',  label: 'RSA-OAEP' },  // descomenta cuando soportes RSA
-      ],
+      options: [{ value: 'AES-256-GCM', label: 'AES-256-GCM' }],
       required: true,
       defaultValue: 'AES-256-GCM',
       admin: { position: 'sidebar' }
@@ -152,7 +150,12 @@ export const EncryptionOperations: CollectionConfig = {
     {
       path: '/v2/decrypt', // =>  /api/encryption_operations/v2/massive-encrypt
       method: 'post',
-      handler: decryptHandlerv2
+      handler: decryptSingleStreamHandler
+    },
+    {
+      path: '/v2/encrypt', // =>  /api/encryption_operations/v2/massive-encrypt
+      method: 'post',
+      handler: encryptSingleStreamHandler
     }
   ]
 };

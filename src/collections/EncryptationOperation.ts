@@ -1,8 +1,8 @@
 // src/collections/EncryptionOperations.ts
 import { CollectionConfig } from 'payload';
-import { encryptHandler } from '@/handlers/v1/encryptHandler';
-import { decryptHandler } from '@/handlers/v1/decryptHandler';
-import { massiveEncryptionHandler } from '@/handlers/v1/massiveEncrypt';
+// import { encryptHandler } from '@/handlers/v1/encryptHandler';
+// import { decryptHandler } from '@/handlers/v1/decryptHandler';
+// import { massiveEncryptionHandler } from '@/handlers/v1/massiveEncrypt';
 import { decryptSingleStreamHandlerV2 } from '@/handlers/v2/decryptHandler';
 import { encryptSingleStreamHandlerV2 } from '@/handlers/v2/encryptHandler';
 import { massiveEncryptionHandlerV2 } from '@/handlers/v2/massiveEncryptionHandler';
@@ -127,21 +127,21 @@ export const EncryptionOperations: CollectionConfig = {
     ]
   },
   endpoints: [
-    {
-      path: '/v1/encrypt', // =>   /api/encryption_operations/v1/encrypt
-      method: 'post',
-      handler: encryptHandler
-    },
-    {
-      path: '/v1/decrypt', // =>  /api/encryption_operations/v1/decrypt
-      method: 'post',
-      handler: decryptHandler
-    },
-    {
-      path: '/v1/massive-encrypt', // =>  /api/encryption_operations/v1/massive-encrypt
-      method: 'post',
-      handler: massiveEncryptionHandler
-    },
+    // {
+    //   path: '/v1/encrypt', // =>   /api/encryption_operations/v1/encrypt
+    //   method: 'post',
+    //   handler: encryptHandler
+    // },
+    // {
+    //   path: '/v1/decrypt', // =>  /api/encryption_operations/v1/decrypt
+    //   method: 'post',
+    //   handler: decryptHandler
+    // },
+    // {
+    //   path: '/v1/massive-encrypt', // =>  /api/encryption_operations/v1/massive-encrypt
+    //   method: 'post',
+    //   handler: massiveEncryptionHandler
+    // },
     {
       path: '/v2/massive-encrypt', // =>  /api/encryption_operations/v2/massive-encrypt
       method: 'post',

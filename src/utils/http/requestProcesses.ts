@@ -259,6 +259,7 @@ export async function getSingleStreamAndValidateFromBusboy(
         });
 
         file.on('end', () => {
+          console.log('Termine de validar el tipo de archivo');
           fileBuffer = Buffer.concat(chunks);
         });
       }

@@ -194,7 +194,7 @@ export async function getMassiveRequestStreams(
 }
 
 /* ========== Parser SINGLE streaming con validaciones integradas ========== */
-export async function getSingleStreamAndValidateFromBusboyX(
+export async function getSingleStreamAndValidateFromBusboy(
   req: PayloadRequest,
   errors: Array<string>,
   validationRules?: string[] // Array opcional de reglas específicas a validar
@@ -356,210 +356,210 @@ export async function getSingleStreamAndValidateFromBusboyX(
   return { filename, mimetype, stream: tee, password };
 }
 
-export async function getSingleStreamAndValidateFromBusboy(
-  req: PayloadRequest,
-  errors: Array<string>,
-  validationRules?: string[]
-): Promise<{ filename: string; mimetype: string; stream: NodeReadable; password: string }> {
-  const headers = toPlainHeaders((req as any).headers ?? req.headers);
-  const body = toNodeReadable(req);
-  const bb = Busboy({ headers, limits: { files: 1, fields: 6, fileSize: 500 * 1024 * 1024 } });
+// export async function getSingleStreamAndValidateFromBusboy(
+//   req: PayloadRequest,
+//   errors: Array<string>,
+//   validationRules?: string[]
+// ): Promise<{ filename: string; mimetype: string; stream: NodeReadable; password: string }> {
+//   const headers = toPlainHeaders((req as any).headers ?? req.headers);
+//   const body = toNodeReadable(req);
+//   const bb = Busboy({ headers, limits: { files: 1, fields: 6, fileSize: 500 * 1024 * 1024 } });
 
-  let filename = 'file.enc';
-  let mimetype = 'application/octet-stream';
-  let password = '';
-  let streamResolved = false;
-  let fileSize = 0;
-  let fileBuffer: Buffer | null = null;
-  let bufferReadyPromise: Promise<void> = Promise.resolve(); // Default resuelto
+//   let filename = 'file.enc';
+//   let mimetype = 'application/octet-stream';
+//   let password = '';
+//   let streamResolved = false;
+//   let fileSize = 0;
+//   let fileBuffer: Buffer | null = null;
+//   let bufferReadyPromise: Promise<void> = Promise.resolve(); // Default resuelto
 
-  const tee = new PassThrough({ highWaterMark: HWM });
+//   const tee = new PassThrough({ highWaterMark: HWM });
 
-  const done = new Promise<void>((resolve, reject) => {
-    bb.on('field', (name, val) => {
-      if (name === 'password') {
-        password = sanitizePassword(val);
-        console.log('Password:', password);
-      }
-    });
+//   const done = new Promise<void>((resolve, reject) => {
+//     bb.on('field', (name, val) => {
+//       if (name === 'password') {
+//         password = sanitizePassword(val);
+//         console.log('Password:', password);
+//       }
+//     });
 
-    bb.on('file', async (_field, file, info) => {
-      console.log('verificando que no este resuelto');
-      if (streamResolved) {
-        file.resume();
-        return;
-      }
+//     bb.on('file', async (_field, file, info) => {
+//       console.log('verificando que no este resuelto');
+//       if (streamResolved) {
+//         file.resume();
+//         return;
+//       }
 
-      filename = info.filename ?? filename;
-      mimetype = (info as any).mimeType ?? (info as any).mimetype ?? mimetype;
-      console.log('Filename:', filename, 'MIME Type:', mimetype);
+//       filename = info.filename ?? filename;
+//       mimetype = (info as any).mimeType ?? (info as any).mimetype ?? mimetype;
+//       console.log('Filename:', filename, 'MIME Type:', mimetype);
 
-      streamResolved = true;
+//       streamResolved = true;
 
-      console.log('Haciendo validaciones:', "if (validationRules?.includes('file-type-validation')) {");
+//       console.log('Haciendo validaciones:', "if (validationRules?.includes('file-type-validation')) {");
       
-      // ✅ SOLUCIÓN: Crear transforms que capturen datos Y los pasen
-      if (validationRules?.includes('file-type-validation')) {
-        const chunks: Buffer[] = [];
-        let totalSize = 0;
-        const maxBufferSize = 1024 * 1024;
+//       // ✅ SOLUCIÓN: Crear transforms que capturen datos Y los pasen
+//       if (validationRules?.includes('file-type-validation')) {
+//         const chunks: Buffer[] = [];
+//         let totalSize = 0;
+//         const maxBufferSize = 1024 * 1024;
 
-        // Promesa que se resuelve cuando el buffer está listo
-        bufferReadyPromise = new Promise<void>((resolveBuffer) => {
-          // Transform que captura datos para el buffer Y los pasa adelante
-          const bufferCapture = new Transform({
-            transform(chunk: Buffer, _enc, cb) {
-              // Capturar para buffer de validación
-              if (totalSize < maxBufferSize) {
-                console.log('Capturando chunk para validación');
-                chunks.push(Buffer.from(chunk)); // Copiar el chunk
-                totalSize += chunk.length;
-              }
+//         // Promesa que se resuelve cuando el buffer está listo
+//         bufferReadyPromise = new Promise<void>((resolveBuffer) => {
+//           // Transform que captura datos para el buffer Y los pasa adelante
+//           const bufferCapture = new Transform({
+//             transform(chunk: Buffer, _enc, cb) {
+//               // Capturar para buffer de validación
+//               if (totalSize < maxBufferSize) {
+//                 console.log('Capturando chunk para validación');
+//                 chunks.push(Buffer.from(chunk)); // Copiar el chunk
+//                 totalSize += chunk.length;
+//               }
               
-              // Pasar el chunk adelante sin modificarlo
-              cb(null, chunk);
-            },
-            flush(cb) {
-              // Cuando termina de procesar todos los chunks
-              console.log('BufferCapture terminado - creando buffer final');
-              fileBuffer = Buffer.concat(chunks);
-              console.log('Buffer creado con tamaño:', fileBuffer.length);
-              resolveBuffer(); // ✅ Resolver la promesa aquí
-              cb();
-            }
-          });
+//               // Pasar el chunk adelante sin modificarlo
+//               cb(null, chunk);
+//             },
+//             flush(cb) {
+//               // Cuando termina de procesar todos los chunks
+//               console.log('BufferCapture terminado - creando buffer final');
+//               fileBuffer = Buffer.concat(chunks);
+//               console.log('Buffer creado con tamaño:', fileBuffer.length);
+//               resolveBuffer(); // ✅ Resolver la promesa aquí
+//               cb();
+//             }
+//           });
 
-          // Transform para contar tamaño
-          const sizeCounter = new Transform({
-            transform(chunk: Buffer, _enc, cb) {
-              fileSize += chunk.length;
-              cb(null, chunk);
-            }
-          });
+//           // Transform para contar tamaño
+//           const sizeCounter = new Transform({
+//             transform(chunk: Buffer, _enc, cb) {
+//               fileSize += chunk.length;
+//               cb(null, chunk);
+//             }
+//           });
 
-          // Pipeline: file -> bufferCapture -> sizeCounter -> tee
-          file.pipe(bufferCapture).pipe(sizeCounter).pipe(tee);
-        });
+//           // Pipeline: file -> bufferCapture -> sizeCounter -> tee
+//           file.pipe(bufferCapture).pipe(sizeCounter).pipe(tee);
+//         });
 
-        file.on('limit', () => {
-          console.log('llegue al limite!');
-          reject(new Error('El archivo excede el tamaño permitido: ' + process.env.FILE_SIZE_LIMIT + 'MB'));
-        });
+//         file.on('limit', () => {
+//           console.log('llegue al limite!');
+//           reject(new Error('El archivo excede el tamaño permitido: ' + process.env.FILE_SIZE_LIMIT + 'MB'));
+//         });
 
-      } else {
-        // Si no necesitamos validación de tipo, solo contador de tamaño
-        const sizeCounter = new Transform({
-          transform(chunk: Buffer, _enc, cb) {
-            fileSize += chunk.length;
-            cb(null, chunk);
-          }
-        });
+//       } else {
+//         // Si no necesitamos validación de tipo, solo contador de tamaño
+//         const sizeCounter = new Transform({
+//           transform(chunk: Buffer, _enc, cb) {
+//             fileSize += chunk.length;
+//             cb(null, chunk);
+//           }
+//         });
 
-        file.pipe(sizeCounter).pipe(tee);
+//         file.pipe(sizeCounter).pipe(tee);
 
-        file.on('limit', () => {
-          console.log('llegue al limite!');
-          reject(new Error('El archivo excede el tamaño permitido: ' + process.env.FILE_SIZE_LIMIT + 'MB'));
-        });
-      }
-    });
+//         file.on('limit', () => {
+//           console.log('llegue al limite!');
+//           reject(new Error('El archivo excede el tamaño permitido: ' + process.env.FILE_SIZE_LIMIT + 'MB'));
+//         });
+//       }
+//     });
 
-    bb.once('error', (err) => {
-      console.log('Error en Busboy:', err);
-      reject(err);
-    });
+//     bb.once('error', (err) => {
+//       console.log('Error en Busboy:', err);
+//       reject(err);
+//     });
 
-    bb.once('finish', async () => {
-      try {
-        console.log('Busboy terminó - esperando que termine el buffer...');
+//     bb.once('finish', async () => {
+//       try {
+//         console.log('Busboy terminó - esperando que termine el buffer...');
         
-        // ✅ Esperar a que el buffer esté listo antes de validar
-        await bufferReadyPromise;
-        console.log('Buffer listo - iniciando validaciones');
+//         // ✅ Esperar a que el buffer esté listo antes de validar
+//         await bufferReadyPromise;
+//         console.log('Buffer listo - iniciando validaciones');
         
-        await performValidations();
-        console.log('Validaciones completadas');
-        resolve();
-      } catch (error) {
-        console.error('Error en validaciones:', error);
-        reject(error);
-      }
-    });
-  });
+//         await performValidations();
+//         console.log('Validaciones completadas');
+//         resolve();
+//       } catch (error) {
+//         console.error('Error en validaciones:', error);
+//         reject(error);
+//       }
+//     });
+//   });
 
-  // Función interna para realizar todas las validaciones
-  const performValidations = async () => {
-    console.log('entrando perform Validations');
-    try {
-      // ✅ Validación de archivo presente
-      if (!streamResolved) {
-        errors.push('No se detectó archivo para encriptar');
-      }
+//   // Función interna para realizar todas las validaciones
+//   const performValidations = async () => {
+//     console.log('entrando perform Validations');
+//     try {
+//       // ✅ Validación de archivo presente
+//       if (!streamResolved) {
+//         errors.push('No se detectó archivo para encriptar');
+//       }
 
-      // ✅ Validación de contraseña
-      if (!password) {
-        errors.push('No se detectó password para encriptar');
-      } else if (typeof password !== 'string') {
-        errors.push('La contraseña debe ser un string');
-      }
+//       // ✅ Validación de contraseña
+//       if (!password) {
+//         errors.push('No se detectó password para encriptar');
+//       } else if (typeof password !== 'string') {
+//         errors.push('La contraseña debe ser un string');
+//       }
 
-      // ✅ Validación de tamaño de archivo
-      const maxSizeMB = Number(process.env.FILE_SIZE_LIMIT) || 10;
-      const maxSizeBytes = maxSizeMB * 1024 * 1024;
-      console.log('MB:', maxSizeMB, 'bytes:', maxSizeBytes);
-      console.log('fileSize:', fileSize);
+//       // ✅ Validación de tamaño de archivo
+//       const maxSizeMB = Number(process.env.FILE_SIZE_LIMIT) || 10;
+//       const maxSizeBytes = maxSizeMB * 1024 * 1024;
+//       console.log('MB:', maxSizeMB, 'bytes:', maxSizeBytes);
+//       console.log('fileSize:', fileSize);
 
-      if (fileSize > maxSizeBytes) {
-        errors.push(`El archivo excede el tamaño máximo permitido de ${maxSizeMB}MB`);
-      }
+//       if (fileSize > maxSizeBytes) {
+//         errors.push(`El archivo excede el tamaño máximo permitido de ${maxSizeMB}MB`);
+//       }
 
-      // ✅ Validación de tipo de archivo (opcional)
-      if (validationRules?.includes('file-type-validation') && streamResolved) {
-        if (!fileBuffer || fileBuffer.length === 0) {
-          console.warn('Buffer vacío - no se puede validar tipo de archivo');
-          errors.push('No se pudo analizar el tipo de archivo');
-        } else {
-          console.log('Validando tipo de archivo - Buffer size:', fileBuffer.length);
-          try {
-            const { allowed, extension, mimeType } = await isAllowedFile(fileBuffer, filename);
-            if (!allowed && extension !== 'unknown') {
-              errors.push(`El tipo de archivo .${extension} o mime-type ${mimeType} no está permitido`);
-            }
-          } catch (typeError) {
-            console.warn('Error en validación de tipo de archivo:', typeError);
-            errors.push('No se pudo validar el tipo de archivo');
-          }
-        }
-      }
+//       // ✅ Validación de tipo de archivo (opcional)
+//       if (validationRules?.includes('file-type-validation') && streamResolved) {
+//         if (!fileBuffer || fileBuffer.length === 0) {
+//           console.warn('Buffer vacío - no se puede validar tipo de archivo');
+//           errors.push('No se pudo analizar el tipo de archivo');
+//         } else {
+//           console.log('Validando tipo de archivo - Buffer size:', fileBuffer.length);
+//           try {
+//             const { allowed, extension, mimeType } = await isAllowedFile(fileBuffer, filename);
+//             if (!allowed && extension !== 'unknown') {
+//               errors.push(`El tipo de archivo .${extension} o mime-type ${mimeType} no está permitido`);
+//             }
+//           } catch (typeError) {
+//             console.warn('Error en validación de tipo de archivo:', typeError);
+//             errors.push('No se pudo validar el tipo de archivo');
+//           }
+//         }
+//       }
 
-      // ✅ Validaciones adicionales personalizadas
-      if (validationRules?.includes('filename-validation')) {
-        if (!filename || filename === 'file.enc') {
-          errors.push('El archivo debe tener un nombre válido');
-        }
+//       // ✅ Validaciones adicionales personalizadas
+//       if (validationRules?.includes('filename-validation')) {
+//         if (!filename || filename === 'file.enc') {
+//           errors.push('El archivo debe tener un nombre válido');
+//         }
 
-        const dangerousChars = /[<>:"/\\|?*\x00-\x1F]/;
-        if (dangerousChars.test(filename)) {
-          errors.push('El nombre del archivo contiene caracteres no permitidos');
-        }
-      }
+//         const dangerousChars = /[<>:"/\\|?*\x00-\x1F]/;
+//         if (dangerousChars.test(filename)) {
+//           errors.push('El nombre del archivo contiene caracteres no permitidos');
+//         }
+//       }
 
-      if (validationRules?.includes('password-strength')) {
-        if (password.length < 1) {
-          errors.push('La contraseña debe tener al menos 1 carácter');
-        }
-      }
-    } catch (validationError) {
-      console.error('Error durante validaciones:', validationError);
-      errors.push('Error interno durante la validación del archivo');
-    }
-  };
+//       if (validationRules?.includes('password-strength')) {
+//         if (password.length < 1) {
+//           errors.push('La contraseña debe tener al menos 1 carácter');
+//         }
+//       }
+//     } catch (validationError) {
+//       console.error('Error durante validaciones:', validationError);
+//       errors.push('Error interno durante la validación del archivo');
+//     }
+//   };
 
-  body.pipe(bb);
-  await done;
+//   body.pipe(bb);
+//   await done;
 
-  return { filename, mimetype, stream: tee, password };
-}
+//   return { filename, mimetype, stream: tee, password };
+// }
 
 export async function parseMassiveEncryptionRequest(request: PayloadRequest, errors: string[]): Promise<ParsedMassiveRequest> {
   // Configurar límites

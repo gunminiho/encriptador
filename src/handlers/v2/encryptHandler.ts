@@ -29,9 +29,9 @@ export async function encryptSingleStreamHandlerV2(req: PayloadRequest): Promise
 
     // 4️⃣ Proceder con la encriptación si no hay errores
     const encName = `${filename}.enc`;
-    console.log('Nombre del archivo encriptado:', encName);
+    //console.log('Nombre del archivo encriptado:', encName);
     const { output } = encryptStreamGCM(stream, password);
-    console.log('Stream de salida encriptado listo.', output);
+    //console.log('Stream de salida encriptado listo.', output);
     // Conversión del stream para la respuesta web
     const nodeOut = output as unknown as NodeJS.ReadableStream;
     const webOut = typeof (Readable as any).toWeb === 'function' ? (Readable as any).toWeb(nodeOut) : (nodeOut as any);

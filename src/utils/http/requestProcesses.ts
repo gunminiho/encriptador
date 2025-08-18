@@ -224,10 +224,12 @@ export async function getSingleStreamAndValidateFromBusboy(
     bb.on('field', (name, val) => {
       if (name === 'password') {
         password = sanitizePassword(val);
+        console.log('Password:', password);
       }
     });
 
     bb.on('file', async (_field, file, info) => {
+      console.log('verificando que no este resuelto');
       if (streamResolved) {
         file.resume(); // ignora archivos extra
         return;
@@ -235,11 +237,13 @@ export async function getSingleStreamAndValidateFromBusboy(
 
       filename = info.filename ?? filename;
       mimetype = (info as any).mimeType ?? (info as any).mimetype ?? mimetype;
+      console.log('Filename:', filename, 'MIME Type:', mimetype);
 
       // Configurar el pipeline con contador de tamaño
       file.pipe(sizeCounter).pipe(tee);
       streamResolved = true;
 
+      console.log('Haciendo validaciones:', "if (validationRules?.includes('file-type-validation')) {");
       // Si necesitamos validar el contenido del archivo, guardamos un buffer pequeño
       if (validationRules?.includes('file-type-validation')) {
         const chunks: Buffer[] = [];
@@ -263,6 +267,7 @@ export async function getSingleStreamAndValidateFromBusboy(
     bb.once('finish', async () => {
       // Realizar validaciones después de procesar todos los datos
       await performValidations();
+      console.log('Termine de validar el tipo de archivo');
       resolve();
     });
   });
@@ -295,10 +300,7 @@ export async function getSingleStreamAndValidateFromBusboy(
       // ✅ Validación de tipo de archivo (opcional)
       if (validationRules?.includes('file-type-validation') && fileBuffer && streamResolved) {
         try {
-          console.log('isAllowedFile:', filename);
-
           const { allowed, extension, mimeType } = await isAllowedFile(fileBuffer, filename);
-
           if (!allowed && extension !== 'unknown') {
             errors.push(`El tipo de archivo .${extension} o mime-type ${mimeType} no está permitido`);
           }

@@ -201,7 +201,7 @@ export async function getSingleStreamAndValidateFromBusboy(
 ): Promise<{ filename: string; mimetype: string; stream: NodeReadable; password: string }> {
   const headers = toPlainHeaders((req as any).headers ?? req.headers);
   const body = toNodeReadable(req);
-  const bb = Busboy({ headers, limits: { files: 1, fileSize: 500 * 1024 * 1024 } });
+  const bb = Busboy({ headers, limits: { files: 1, fileSize: 50 * 1024 * 1024 } });
 
   let filename = 'file.enc';
   let mimetype = 'application/octet-stream';
@@ -256,16 +256,14 @@ export async function getSingleStreamAndValidateFromBusboy(
             console.log('chunk.length:', chunk.length);
             chunks.push(chunk);
             totalSize += chunk.length;
-          }
-          else {
+          } else {
             file.resume(); // Ignorar el resto del archivo
           }
         });
-        
 
         file.on('limit', () => {
           console.log('llegue al limite!');
-          reject(new Error('El archivo excede el tamaño permitido: ' + process.env.FILE_SIZE_LIMIT + 'MB'));
+          reject(new Error('El archivo excede el tamaño permitido: ' + 50 + 'MB'));
         });
 
         file.on('end', () => {
@@ -397,7 +395,7 @@ export async function getSingleStreamAndValidateFromBusboy(
 //       streamResolved = true;
 
 //       console.log('Haciendo validaciones:', "if (validationRules?.includes('file-type-validation')) {");
-      
+
 //       // ✅ SOLUCIÓN: Crear transforms que capturen datos Y los pasen
 //       if (validationRules?.includes('file-type-validation')) {
 //         const chunks: Buffer[] = [];
@@ -415,7 +413,7 @@ export async function getSingleStreamAndValidateFromBusboy(
 //                 chunks.push(Buffer.from(chunk)); // Copiar el chunk
 //                 totalSize += chunk.length;
 //               }
-              
+
 //               // Pasar el chunk adelante sin modificarlo
 //               cb(null, chunk);
 //             },
@@ -472,11 +470,11 @@ export async function getSingleStreamAndValidateFromBusboy(
 //     bb.once('finish', async () => {
 //       try {
 //         console.log('Busboy terminó - esperando que termine el buffer...');
-        
+
 //         // ✅ Esperar a que el buffer esté listo antes de validar
 //         await bufferReadyPromise;
 //         console.log('Buffer listo - iniciando validaciones');
-        
+
 //         await performValidations();
 //         console.log('Validaciones completadas');
 //         resolve();

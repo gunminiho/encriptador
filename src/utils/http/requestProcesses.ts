@@ -252,6 +252,7 @@ export async function getSingleStreamAndValidateFromBusboy(
 
         file.on('data', (chunk: Buffer) => {
           if (totalSize < maxBufferSize) {
+            console.log('1');
             chunks.push(chunk);
             totalSize += chunk.length;
           }

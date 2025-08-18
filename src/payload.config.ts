@@ -17,12 +17,14 @@ import { ErrorLogs } from '@/collections/ErrorLog';
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
 
+const ORIGINS = ['http://127.0.0.1:5500', 'http://localhost:5590', '*'];
+
 export default buildConfig({
   onInit: async () => {
     // Aquí puedes realizar acciones al inicializar Payload
     console.log('Servidor de Payload iniciado');
   },
-  cors: '*',
+  cors: ORIGINS,
   admin: {
     user: Users.slug,
     importMap: {

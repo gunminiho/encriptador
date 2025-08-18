@@ -14,12 +14,18 @@ export function bytesToMB(bytes: number, decimals = 4): number {
   return Number((bytes / BYTES_IN_MB).toFixed(decimals));
 }
 
+/**
+ * Convierte bytes a megabytes (base binaria, 1 MB = 1 048 576 bytes).
+ * @param n  Número de bytes.
+ * @returns  Megabytes como número.
+ */
+// Formatea un número en megabytes (base binaria, 1 MB = 1 048 576 bytes).
 export const fmtMB = (n: number) => (n / 1024 / 1024).toFixed(1) + ' MB';
 
 /**
- * Convierte bytes a megabytes (base binaria, 1 MB = 1 048 576 bytes).
- * @param req  PayloadRequest.
- * @returns  Retorna un tipo NodeReadable.
+ * Convierte un stream legible por la web a un stream legible por Node.js.
+ * @param req  request 
+ * @returns  Stream legible por Node.js.
  */
 export function toNodeReadable(req: unknown): NodeReadable {
   const r: any = req;
@@ -67,6 +73,11 @@ export function toError(e: unknown): Error {
   }
 }
 
+/**
+ * Normaliza nombres de archivos.
+ * @param raw  Nombre del archivo sin rutas fake.
+ * @returns  Nombre del archivo normalizado.
+ */
 // Normaliza nombres para buscar en el CSV (case-insensitive, sin BOM, sin rutas fake)
 export const normalizeFileName = (raw: string): string =>
   raw
@@ -78,6 +89,11 @@ export const normalizeFileName = (raw: string): string =>
     .normalize('NFC')
     .toLowerCase();
 
+/**
+ * Normaliza nombres de archivos.
+ * @param h  Cabeceras (Headers o plain object).
+ * @returns  Nombre del archivo normalizado.
+ */
 // Convierte cabeceras (Headers o plain object) a objeto simple para Busboy
 export const toPlainHeaders = (h: any): Record<string, string> => {
   try {
@@ -88,6 +104,12 @@ export const toPlainHeaders = (h: any): Record<string, string> => {
   return Object.fromEntries(Object.entries(h ?? {}).map(([k, v]) => [k, String(v)]));
 };
 
+/**
+ * Convierte un stream legible por Node.js a un stream legible por la web.
+ * @param nodeZipStream  Stream legible por Node.js.
+ * @returns  Stream legible por la web.
+ */
+// Convierte cabeceras (Headers o plain object) a objeto simple para Busboy
 /* ============================== Web Readable con logs ============================== */
 export function makeWebZipStream(nodeZipStream: NodeJS.ReadableStream) {
   let total = 0,
@@ -133,4 +155,3 @@ export function makeWebZipStream(nodeZipStream: NodeJS.ReadableStream) {
 }
 
 export const removeEncExt = (name: string) => name.replace(/\.enc$/i, '') || name;
-

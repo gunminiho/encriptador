@@ -13,6 +13,8 @@ export type PayloadFileRequest = {
   fieldName?: string;
 };
 
+export type NodeReadable = NodeJS.ReadableStream;
+
 export type MassiveEncryptionRequest = {
   csvFile: PayloadFileRequest;
   dataFiles: Array<PayloadFileRequest>;
@@ -105,7 +107,7 @@ export const EXTENSION_BLACKLIST = new Set([
   'app',
   'dmg',
   // tipo desconocido
-  'unknown'
+  'desconocido'
 ]);
 
 export type PasswordMap = Map<string, string>;
@@ -125,5 +127,10 @@ export type ZipManifestRecord = {
 
 export type FileStatus = { file: string; status: 'ok'; size: number } | { file: string; status: 'missing_password' } | { file: string; status: 'error'; message: string };
 
-
-export type NodeReadable = NodeJS.ReadableStream;
+export type ParsedSingle = {
+  filename: string;
+  mimetype: string;
+  stream: NodeReadable;
+  password: string;
+  size?: number;
+};

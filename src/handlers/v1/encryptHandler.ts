@@ -20,7 +20,7 @@ export const encryptHandler = async (req: PayloadRequest): Promise<Response> => 
     const validRequest = await validateSingleRequest({ file, password }, errors);
     if (validRequest instanceof Response) return validRequest;
 
-    // 4️⃣ Cifrar todos los archivos: devuelve zip y tiempo de procesamiento
+    // 4️⃣ Cifrar todos los archivos: devuelve archivo y tiempo de procesamiento
     const { fileName, blob, elapsedMs } = singleEncryption(file, password);
 
     // 5️⃣ Registrar operación masiva

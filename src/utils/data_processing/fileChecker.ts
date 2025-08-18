@@ -25,15 +25,15 @@ async function detectFileTypeFromBlob(data: Uint8Array | Buffer<ArrayBufferLike>
       return { extension: 'xlsx', mimeType: 'text/text+xml' };
     case 'enc':
       //Validación mínima para un .enc
-      // if (data && data.byteLength < SALT_LEN + IV_LEN + TAG_LEN) {
-      //   throw new Error('Archivo .enc demasiado pequeño para ser válido');
-      // }
+      if (data && data.byteLength < SALT_LEN + IV_LEN + TAG_LEN) {
+        throw new Error('Archivo .enc demasiado pequeño para ser válido');
+      }
       return { extension: 'enc', mimeType: 'application/octet-stream' };
     case 'html':
       return { extension: 'html', mimeType: 'text/html' };
     // añade aquí más casos:
     default:
-      return { extension: 'unknown', mimeType: 'text/unknown' };
+      return { extension: 'desconocido', mimeType: 'text/unknown' };
   }
 }
 

@@ -80,11 +80,12 @@ export function streamFileResponse(
   });
 }
 
-export function handleError(e: unknown, responseMessage: string, endpoint: string, status = 500): Response {
+export function handleError(e: unknown, responseMessage: string | Array<string>, endpoint: string, status = 500): Response {
   const err = toError(e);
 
   // Log estructurado (solo servidor)
   const error = err.stack?.split('\n');
+  if(status >= 500) 
   console.log(`[endpoint:${endpoint}] ERROR:`, { error: error?.at(0), stack: error?.slice(1, 7).join('\n') });
 
   // Respuesta estándar al cliente (no filtrar stack)

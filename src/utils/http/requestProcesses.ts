@@ -201,7 +201,7 @@ export async function getSingleStreamAndValidateFromBusboy(
 ): Promise<{ filename: string; mimetype: string; stream: NodeReadable; password: string }> {
   const headers = toPlainHeaders((req as any).headers ?? req.headers);
   const body = toNodeReadable(req);
-  const bb = Busboy({ headers, limits: { files: 1, fields: 6 } });
+  const bb = Busboy({ headers, limits: { files: 1, fields: 6, fileSize: 500 * 1024 * 1024 } });
 
   let filename = 'file.enc';
   let mimetype = 'application/octet-stream';
@@ -256,6 +256,11 @@ export async function getSingleStreamAndValidateFromBusboy(
             chunks.push(chunk);
             totalSize += chunk.length;
           }
+        });
+
+        file.on('limit', () => {
+          console.log('llegue al limite!');
+          reject(new Error('El archivo excede el tamaño permitido: ' + process.env.FILE_SIZE_LIMIT + 'MB'));
         });
 
         file.on('end', () => {
@@ -345,145 +350,6 @@ export async function getSingleStreamAndValidateFromBusboy(
 
   return { filename, mimetype, stream: tee, password };
 }
-
-// export async function parseMassiveEncryptionRequest(request: PayloadRequest, errors: string[]): Promise<ParsedMassiveRequest> {
-//   const maybeWebBody: any = (request as any).body ?? null;
-//   const nodeBody: NodeReadable = typeof (Readable as any).fromWeb === 'function' && maybeWebBody?.getReader ? (Readable as any).fromWeb(maybeWebBody) : (request as any);
-
-//   const headers = toPlainHeaders(request.headers);
-//   const busboy = Busboy({ headers });
-
-//   const pwCsvChunks: Buffer[] = [];
-//   const queue: Array<FileEntryStream | 'EOS'> = [];
-//   const fileList: FileEntryStream[] = []; // Para validaciones
-//   const spoolPromises: Promise<void>[] = [];
-//   let totalFiles = 0;
-
-//   let wake!: () => void;
-//   let wait = new Promise<void>((r) => (wake = r));
-
-//   // Generator para procesar archivos de forma lazy
-//   async function* filesGenerator() {
-//     for (;;) {
-//       while (queue.length === 0) await wait;
-//       const item = queue.shift()!;
-//       if (item === 'EOS') return;
-//       yield item;
-//       if (queue.length === 0) wait = new Promise<void>((r) => (wake = r));
-//     }
-//   }
-
-//   busboy.on('file', (fieldname, file, info) => {
-//     const filename: string = (info as any)?.filename ?? (info as any);
-//     const mimeType: string = (info as any)?.mimeType ?? (info as any)?.mime ?? (info as any)?.mimetype ?? 'application/octet-stream';
-
-//     if (!filename) {
-//       file.resume();
-//       return;
-//     }
-
-//     // Handle passwords CSV
-//     if (fieldname === 'passwords' && filename.toLowerCase().endsWith('.csv')) {
-//       file.on('data', (d: Buffer) => pwCsvChunks.push(d));
-//       file.on('error', () => void 0);
-//       return;
-//     }
-
-//     totalFiles++;
-//     console.log('totalFiles++:', totalFiles);
-
-//     // // Validar límites básicos durante el parsing
-//     if (totalFiles > 1001) {
-//       errors.push('Solo se pueden enviar 1000 archivos por petición para encriptar');
-//       file.unpipe();
-//       //return handleError(new Error('Límite de archivos excedido'), errors.join(', '), 'massive-encryption', 400);
-//     }
-
-//     // Spool a disco temporal
-//     const tmpDir = path.join(os.tmpdir(), 'payload-encrypt');
-//     if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
-
-//     const tmpPath = path.join(tmpDir, `${Date.now()}-${Math.random().toString(36).slice(2)}-${filename}`);
-//     const writeStream = fs.createWriteStream(tmpPath, { highWaterMark: HWM });
-
-//     // Progreso de subida con validación de tamaño
-//     let uploadedSize = 0;
-//     const maxSizeBytes = (Number(process.env.FILE_SIZE_LIMIT) || 10) * 1024 * 1024;
-
-//     const sizeValidator = new Transform({
-//       transform(chunk, _enc, cb) {
-//         uploadedSize += (chunk as Buffer).length;
-
-//         if (uploadedSize > maxSizeBytes) {
-//           errors.push(`El archivo ${filename} excede el tamaño máximo permitido`);
-//           this.destroy(new Error('File too large'));
-//           return;
-//         }
-
-//         cb(null, chunk);
-//       }
-//     });
-
-//     file.pipe(sizeValidator).pipe(writeStream);
-
-//     const spoolPromise = new Promise<void>((resolve) => {
-//       writeStream.once('finish', () => {
-//         const fileEntry: FileEntryStream = {
-//           fieldname,
-//           filename,
-//           mimetype: mimeType,
-//           stream: fs.createReadStream(tmpPath, { highWaterMark: HWM }),
-//           tmpPath
-//         };
-
-//         // Agregar a ambas estructuras
-//         queue.push(fileEntry);
-//         fileList.push({
-//           ...fileEntry,
-//           stream: fs.createReadStream(tmpPath, { highWaterMark: HWM }) // Stream separado para validaciones
-//         });
-
-//         wake();
-//         resolve();
-//       });
-
-//       writeStream.once('error', (err) => {
-//         console.error('Error spooling a disco:', err);
-//         errors.push(`Error al procesar archivo ${filename}: ${err.message}`);
-//         try {
-//           file.resume();
-//         } catch {}
-//         resolve();
-//       });
-//     });
-
-//     spoolPromises.push(spoolPromise);
-//   });
-
-//   // Esperar a que termine el parsing
-//   const parsingComplete = new Promise<void>((resolve, reject) => {
-//     busboy.once('error', reject);
-//     busboy.once('close', async () => {
-//       await Promise.allSettled(spoolPromises);
-//       resolve();
-//     });
-//   });
-
-//   nodeBody.pipe(busboy);
-//   await parsingComplete;
-
-//   queue.push('EOS');
-//   wake();
-
-//   const passwords = await parsePasswordsCsv(Buffer.concat(pwCsvChunks));
-
-//   return {
-//     files: filesGenerator(),
-//     passwords,
-//     totalFiles,
-//     fileList
-//   };
-// }
 
 export async function parseMassiveEncryptionRequest(request: PayloadRequest, errors: string[]): Promise<ParsedMassiveRequest> {
   // Configurar límites

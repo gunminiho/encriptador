@@ -105,9 +105,9 @@ export function makeWebZipStream(nodeZipStream: NodeJS.ReadableStream) {
         chunks++;
         lastTs = Date.now();
         if (total >= ZIP_LOG_STEP || chunks % 16 === 0) {
-          //console.log(`[webStream] enqueue: chunk=${u8.byteLength}B, total=${fmtMB(total)}, desiredSize=${controller.desiredSize}`);
+          console.log(`[webStream] enqueue: chunk=${u8.byteLength}B, total=${fmtMB(total)}, desiredSize=${controller.desiredSize}`);
         }
-        //if (controller.desiredSize !== null && controller.desiredSize <= 0) console.log('[webStream] backpressure');
+        if (controller.desiredSize !== null && controller.desiredSize <= 0) console.log('[webStream] backpressure');
       });
       nodeZipStream.once('end', () => {
         //console.log('[webStream] end -> close');
@@ -133,4 +133,3 @@ export function makeWebZipStream(nodeZipStream: NodeJS.ReadableStream) {
 }
 
 export const removeEncExt = (name: string) => name.replace(/\.enc$/i, '') || name;
-

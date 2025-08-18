@@ -1,6 +1,6 @@
 import { PassThrough, Readable, type Readable as NodeReadable } from 'node:stream';
 import archiver from 'archiver';
-import { HWM } from '@/custom-types';
+import { HWM, ZIP_LOG_STEP } from '@/custom-types';
 import { finished } from 'node:stream/promises';
 
 // Empaquetador ZIP en streaming (SIN manifest)
@@ -68,4 +68,16 @@ export function createZipPackager() {
     finalize,
     abort
   };
+}
+export function setupZipLogging(nodeZipStream: NodeJS.ReadableStream): void {
+  let zipAccumulator = 0;
+
+  nodeZipStream.on('data', (chunk: Buffer) => {
+    zipAccumulator += chunk.length;
+    if (zipAccumulator >= ZIP_LOG_STEP) {
+      zipAccumulator = 0;
+    }
+  });
+
+  nodeZipStream.on('error', (error) => console.error('[zip.node] error:', error));
 }

@@ -3,9 +3,9 @@ import { CollectionConfig } from 'payload';
 import { encryptHandler } from '@/handlers/v1/encryptHandler';
 import { decryptHandler } from '@/handlers/v1/decryptHandler';
 import { massiveEncryptionHandler } from '@/handlers/v1/massiveEncrypt';
-import { massiveEncryptionHandler2 } from '@/handlers/v2/massiveEncryption2';
-import { decryptSingleStreamHandler } from '@/handlers/v2/decryptHandler2';
-import { encryptSingleStreamHandler } from '@/handlers/v2/encryptHandler2';
+import { decryptSingleStreamHandlerV2 } from '@/handlers/v2/decryptHandler';
+import { encryptSingleStreamHandlerV2 } from '@/handlers/v2/encryptHandler';
+import { massiveEncryptionHandlerV2 } from '@/handlers/v2/massiveEncryptionHandler';
 
 export const EncryptionOperations: CollectionConfig = {
   slug: 'encryption_operations',
@@ -145,17 +145,17 @@ export const EncryptionOperations: CollectionConfig = {
     {
       path: '/v2/massive-encrypt', // =>  /api/encryption_operations/v2/massive-encrypt
       method: 'post',
-      handler: massiveEncryptionHandler2
+      handler: massiveEncryptionHandlerV2
     },
     {
       path: '/v2/decrypt', // =>  /api/encryption_operations/v2/massive-encrypt
       method: 'post',
-      handler: decryptSingleStreamHandler
+      handler: decryptSingleStreamHandlerV2
     },
     {
       path: '/v2/encrypt', // =>  /api/encryption_operations/v2/massive-encrypt
       method: 'post',
-      handler: encryptSingleStreamHandler
+      handler: encryptSingleStreamHandlerV2
     }
   ]
 };

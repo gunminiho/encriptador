@@ -37,10 +37,10 @@ export type BinaryLike =
   | ReadableStream<Uint8Array>;
 
 export interface EncryptionResult {
-  fileName: string;
-  blob: Buffer | Uint8Array | ArrayBuffer; // ajusta al tipo real que devuelves
-  salt?: Uint8Array;
-  iv?: Uint8Array;
+  ok: number;
+  missingPassword: number;
+  failed: number;
+  status: FileStatus[];
 }
 
 export interface DecryptionResult {
@@ -123,7 +123,20 @@ export type ZipManifestRecord = {
   error?: string;
 };
 
-export type FileStatus = { file: string; status: 'ok'; size: number } | { file: string; status: 'missing_password' } | { file: string; status: 'error'; message: string };
-
+export type FileStatus = { file: string; status?: 'error'; message: string } | { file: string; status: 'ok'; size: number } | { file: string; status: 'missing_password' };
 
 export type NodeReadable = NodeJS.ReadableStream;
+
+export interface ParsedMassiveRequest {
+  files: AsyncGenerator<FileEntryStream, void, void>;
+  passwords: PasswordMap;
+  totalFiles: number;
+  totalSizeBytes: number;
+  tempDir: string;
+  fileList: FileEntryStream[]; // Para validaciones
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+}

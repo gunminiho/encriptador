@@ -1,13 +1,20 @@
 // src/handlers/decryptSingleStreamHandler.ts
 import type { PayloadRequest } from 'payload';
 import { Readable } from 'node:stream';
-import { getSingleStreamFromBusboy } from '@/utils/http/requestProcesses';
+import { getSingleStreamAndValidateFromBusboy } from '@/utils/http/requestProcesses';
 import { decryptStreamGCM } from '@/utils/data_processing/encryption';
 import { removeEncExt } from '@/utils/data_processing/converter';
 
-export async function decryptSingleStreamHandler(req: PayloadRequest): Promise<Response> {
+export async function decryptSingleStreamHandlerV2(req: PayloadRequest): Promise<Response> {
+  const errors: Array<string> = [];
   try {
-    const { filename, stream, password } = await getSingleStreamFromBusboy(req);
+    // 2️⃣ Obtener el stream, password y hacer validaciones en el proceso
+    const validationRules = [
+      'file-type-validation', // Validar tipo de archivo
+      'filename-validation', // Validar nombre de archivo
+      'password-strength' // Validar fortaleza de contraseña
+    ];
+    const { filename, stream, password } = await getSingleStreamAndValidateFromBusboy(req, errors, validationRules);
     const plainName = removeEncExt(filename);
 
     const { output } = decryptStreamGCM(stream, password);

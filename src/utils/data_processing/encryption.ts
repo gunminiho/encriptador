@@ -3,12 +3,27 @@ import { randomBytes, scryptSync, createCipheriv, createDecipheriv } from 'crypt
 import archiver from 'archiver';
 import { PassThrough } from 'stream';
 import { performance } from 'perf_hooks';
-import { PayloadFileRequest, EncryptionResult, DecryptionResult, HWM, keyLen, SCRYPT, SALT_LEN, IV_LEN, TAG_LEN, MassiveEncryptionResult } from '@/custom-types';
+import {
+  PayloadFileRequest,
+  EncryptionResult,
+  DecryptionResult,
+  HWM,
+  keyLen,
+  SCRYPT,
+  SALT_LEN,
+  IV_LEN,
+  TAG_LEN,
+  MassiveEncryptionResult,
+  FileStatus,
+  FileEntryStream
+} from '@/custom-types';
 import { toArrayBuffer } from './converter';
 import { readExactlyHeader, HoldbackTransform } from './validator';
 import { type Readable as NodeReadable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { scryptAsync } from '@/utils/data_processing/trafficController';
+import { createZipPackager } from './zipper';
+import { tap } from '@/utils/data_processing/trafficController';
 
 function encryptFileGCM(buffer: ArrayBuffer, password: string, name: string): EncryptionResult {
   // 1️⃣ Derivar clave
@@ -171,4 +186,30 @@ export function encryptStreamGCM(input: NodeReadable, password: string) {
   })();
 
   return { output: out, metaPromise };
+}
+
+export async function processFileEncryption(fileEntry: FileEntryStream, password: string, zipPackager: ReturnType<typeof createZipPackager>): Promise<FileStatus> {
+  try {
+    const tappedSource = fileEntry.stream.pipe(tap(`src ${fileEntry.filename}`, 1 * 1024 * 1024));
+
+    const { output, metaPromise } = encryptStreamGCM(tappedSource, password);
+    const tappedOutput = output.pipe(tap(`enc ${fileEntry.filename}`, 1 * 1024 * 1024));
+
+    const entryComplete = zipPackager.appendEntryAwait(`${fileEntry.filename}.enc`, tappedOutput);
+
+    const metadata = await metaPromise;
+    await entryComplete;
+
+    return {
+      file: fileEntry.filename,
+      status: 'ok',
+      size: metadata.size
+    };
+  } catch (error: any) {
+    return {
+      file: fileEntry.filename,
+      status: 'error',
+      message: error?.message ?? String(error)
+    };
+  }
 }

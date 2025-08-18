@@ -264,7 +264,10 @@ export async function getSingleStreamAndValidateFromBusboy(
       }
     });
 
-    bb.once('error', reject);
+    bb.once('error', () => {
+      console.log('rejecteando!');
+      reject();
+    });
     bb.once('finish', async () => {
       // Realizar validaciones después de procesar todos los datos
       await performValidations();
@@ -275,6 +278,7 @@ export async function getSingleStreamAndValidateFromBusboy(
 
   // Función interna para realizar todas las validaciones
   const performValidations = async () => {
+    console.log('entrando perform Validations');
     try {
       // ✅ Validación de archivo presente
       if (!streamResolved) {

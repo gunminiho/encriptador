@@ -392,7 +392,7 @@ export async function getSingleStreamAndValidateFromBusboy(
       streamResolved = true;
 
       console.log('Haciendo validaciones:', "if (validationRules?.includes('file-type-validation')) {");
-      
+
       // ✅ SOLUCIÓN: Crear transforms que capturen datos Y los pasen
       if (validationRules?.includes('file-type-validation')) {
         const chunks: Buffer[] = [];
@@ -408,9 +408,16 @@ export async function getSingleStreamAndValidateFromBusboy(
               chunks.push(Buffer.from(chunk)); // Copiar el chunk
               totalSize += chunk.length;
             }
-            
+
             // Pasar el chunk adelante sin modificarlo
             cb(null, chunk);
+          },
+          flush(cb) {
+            // Cuando termina de procesar todos los chunks
+            console.log('BufferCapture terminado - creando buffer final');
+            fileBuffer = Buffer.concat(chunks);
+            console.log('Buffer creado con tamaño:', fileBuffer.length);
+            cb();
           }
         });
 
@@ -425,18 +432,10 @@ export async function getSingleStreamAndValidateFromBusboy(
         // Pipeline: file -> bufferCapture -> sizeCounter -> tee
         file.pipe(bufferCapture).pipe(sizeCounter).pipe(tee);
 
-        // Escuchar cuando termine el pipeline
-        tee.on('finish', () => {
-          console.log('Pipeline terminado - creando buffer final');
-          fileBuffer = Buffer.concat(chunks);
-          console.log('Buffer creado con tamaño:', fileBuffer.length);
-        });
-
         file.on('limit', () => {
           console.log('llegue al limite!');
           reject(new Error('El archivo excede el tamaño permitido: ' + process.env.FILE_SIZE_LIMIT + 'MB'));
         });
-
       } else {
         // Si no necesitamos validación de tipo, solo contador de tamaño
         const sizeCounter = new Transform({
@@ -463,10 +462,10 @@ export async function getSingleStreamAndValidateFromBusboy(
     bb.once('finish', async () => {
       try {
         console.log('Busboy terminó - iniciando validaciones');
-        
+
         // Pequeña espera para asegurar que el pipeline termine
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         await performValidations();
         console.log('Validaciones completadas');
         resolve();

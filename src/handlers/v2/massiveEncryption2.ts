@@ -14,6 +14,7 @@ import { encryptStreamGCM } from '@/utils/data_processing/encryption';
 export async function massiveEncryptionHandler2(req: PayloadRequest): Promise<Response> {
   console.time('⏱️ massive-encrypt');
   //console.log('[handler] inicio');
+
   const { files, passwords } = await getMassiveRequestStreams(req);
   //console.log('[handler] archivos a procesar:', totalFiles);
 

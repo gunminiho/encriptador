@@ -285,6 +285,8 @@ export async function getSingleStreamAndValidateFromBusboy(
       // ✅ Validación de tamaño de archivo
       const maxSizeMB = Number(process.env.FILE_SIZE_LIMIT) || 10; // Default 10MB
       const maxSizeBytes = maxSizeMB * 1024 * 1024;
+      console.log('MB:', maxSizeMB, 'bytes:', maxSizeBytes);
+      console.log('fileSize:', fileSize);
 
       if (fileSize > maxSizeBytes) {
         errors.push(`El archivo excede el tamaño máximo permitido de ${maxSizeMB}MB`);
@@ -475,15 +477,12 @@ export async function getSingleStreamAndValidateFromBusboy(
 //   };
 // }
 
-export async function parseMassiveEncryptionRequest(
-  request: PayloadRequest,
-  errors: string[]
-): Promise<ParsedMassiveRequest> {
+export async function parseMassiveEncryptionRequest(request: PayloadRequest, errors: string[]): Promise<ParsedMassiveRequest> {
   // Configurar límites
   const limits = {
     maxFiles: process.env.MAX_FILES ? parseInt(process.env.MAX_FILES, 10) : 10000, // Máximo de archivos
     maxTotalSizeGB: process.env.MAX_TOTAL_SIZE_GB ? parseInt(process.env.MAX_TOTAL_SIZE_GB, 10) : 2048, // 2GB total
-    maxFileSizeMB: process.env.MAX_FILE_SIZE_MB ? parseFloat(process.env.MAX_FILE_SIZE_MB) : 2.024
+    maxFileSizeMB: process.env.MAX_FILE_SIZE_MB ? parseFloat(process.env.MAX_FILE_SIZE_MB) : 20
   };
 
   const maxTotalSizeBytes = limits.maxTotalSizeGB * 1024 * 1024 * 1024;
@@ -492,7 +491,7 @@ export async function parseMassiveEncryptionRequest(
   // Crear carpeta temporal única para este request
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const tempDir = path.join(os.tmpdir(), 'payload-encrypt', requestId);
-  
+
   try {
     await fs.promises.mkdir(tempDir, { recursive: true });
   } catch (error) {
@@ -501,9 +500,7 @@ export async function parseMassiveEncryptionRequest(
   }
 
   const maybeWebBody: any = (request as any).body ?? null;
-  const nodeBody: NodeReadable = typeof (Readable as any).fromWeb === 'function' && maybeWebBody?.getReader 
-    ? (Readable as any).fromWeb(maybeWebBody) 
-    : (request as any);
+  const nodeBody: NodeReadable = typeof (Readable as any).fromWeb === 'function' && maybeWebBody?.getReader ? (Readable as any).fromWeb(maybeWebBody) : (request as any);
 
   const headers = toPlainHeaders(request.headers);
   const busboy = Busboy({ headers });
@@ -512,7 +509,7 @@ export async function parseMassiveEncryptionRequest(
   const queue: Array<FileEntryStream | 'EOS'> = [];
   const fileList: FileEntryStream[] = [];
   const spoolPromises: Promise<void>[] = [];
-  
+
   let totalFiles = 0;
   let totalSizeBytes = 0;
   let shouldStopProcessing = false; // Flag para detener procesamiento
@@ -532,10 +529,7 @@ export async function parseMassiveEncryptionRequest(
 
   busboy.on('file', (fieldname, file, info) => {
     const filename: string = (info as any)?.filename ?? (info as any);
-    const mimeType: string = (info as any)?.mimeType ?? 
-      (info as any)?.mime ?? 
-      (info as any)?.mimetype ?? 
-      'application/octet-stream';
+    const mimeType: string = (info as any)?.mimeType ?? (info as any)?.mime ?? (info as any)?.mimetype ?? 'application/octet-stream';
 
     if (!filename) {
       file.resume();
@@ -580,7 +574,7 @@ export async function parseMassiveEncryptionRequest(
         }
 
         fileSize += chunk.length;
-        
+
         // ⚡ LÍMITE POR ARCHIVO - Parar este archivo específico
         if (fileSize > maxFileSizeBytes) {
           if (!fileSizeExceeded) {
@@ -640,7 +634,7 @@ export async function parseMassiveEncryptionRequest(
           // Limpiar archivo si no es válido
           fs.promises.unlink(tmpPath).catch(() => {});
         }
-        
+
         wake();
         resolve();
       });
@@ -648,10 +642,10 @@ export async function parseMassiveEncryptionRequest(
       writeStream.once('error', (err) => {
         console.error(`Error spooling archivo ${filename}:`, err);
         errors.push(`Error al procesar archivo ${filename}: ${err.message}`);
-        
+
         // Limpiar archivo con error
         fs.promises.unlink(tmpPath).catch(() => {});
-        
+
         try {
           file.resume();
         } catch {}
@@ -680,22 +674,22 @@ export async function parseMassiveEncryptionRequest(
       console.error('Error en busboy:', err);
       reject(err);
     });
-    
+
     busboy.once('close', async () => {
       console.log(`🏁 Parsing completo. Esperando ${spoolPromises.length} archivos...`);
-      
+
       // Esperar todos los archivos, incluso los que fallaron
       await Promise.allSettled(spoolPromises);
-      
+
       console.log(`✅ Spooling completado. Archivos válidos: ${fileList.length}/${totalFiles}`);
       console.log(`📦 Tamaño total: ${(totalSizeBytes / (1024 * 1024)).toFixed(2)}MB`);
-      
+
       resolve();
     });
   });
 
   nodeBody.pipe(busboy);
-  
+
   try {
     await parsingComplete;
   } catch (error) {

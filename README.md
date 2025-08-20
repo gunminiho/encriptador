@@ -75,7 +75,8 @@ Para errores de validación y casos de negocio:
 ```
 
 - **400**: errores de validación o petición inválida  
-- **413**: tamaño por archivo, cantidad o tamaño total excedidos  
+- **413**: tamaño por archivo, cantidad o tamaño total excedidos 
+- **422**: archivo corrupto/invalido  y/o contraseña incorrecta
 - **401**: autenticación inválida  
 - **500**: error interno
 
@@ -151,7 +152,7 @@ Encripta **múltiples** archivos en una sola petición. Cada archivo se cifra po
 - Requiere **≥ 2** archivos.
 - **Máximo:** 1000 archivos y **2 GB** totales.
 - **Cada** archivo ≤ **20 MB**.
-- Proporcionar contraseñas vía CSV (`passwords`) o una única contraseña (`password`) si se sube **un** archivo.
+- Proporcionar contraseñas vía CSV (`passwords`).
 - Si se encuentra el archivo en el envío y también se encuentra declarado en el .csv pero no hay contraseña declarada en el csv, **se omitirá la encriptación.**
 
 ### Headers

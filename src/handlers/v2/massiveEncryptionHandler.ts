@@ -53,7 +53,6 @@ export async function massiveEncryptionHandlerV2(req: PayloadRequest): Promise<R
     // 5) Programa el logging al cierre del ZIP (no bloquea)
     done
       .then(async () => {
-        console.log('ok_files:', ok_files);
         const elapsedMs = Math.round(performance.now() - t0);
         if (ok_files.length > 0) {
           const r = await createEncryptionResult(req, ok_files, elapsedMs, 'encrypt');

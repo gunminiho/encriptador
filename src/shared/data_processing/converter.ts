@@ -119,7 +119,7 @@ export function makeWebZipStream(nodeZipStream: NodeJS.ReadableStream) {
         controller.error(e);
       });
       timer = setInterval(() => {
-        console.log(`[webStream] hb: total=${fmtMB(total)}, chunks=${chunks}, idle=${((Date.now() - lastTs) / 1000).toFixed(1)}s, desired=${controller.desiredSize}`);
+        //console.log(`[webStream] hb: total=${fmtMB(total)}, chunks=${chunks}, idle=${((Date.now() - lastTs) / 1000).toFixed(1)}s, desired=${controller.desiredSize}`);
       }, 2000);
     },
     cancel(reason) {

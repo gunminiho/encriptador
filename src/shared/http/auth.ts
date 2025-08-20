@@ -1,5 +1,5 @@
 import type { PayloadRequest } from 'payload';
-import { response } from '@/utils/http/response';
+import { response } from '@/shared/http/response';
 
 export const isValidUser = async (req: PayloadRequest): Promise<Response | boolean> => {
   const auth = req.headers.get('Authorization') || '';

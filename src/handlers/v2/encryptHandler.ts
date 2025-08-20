@@ -1,37 +1,59 @@
 // src/handlers/encryptSingleStreamHandler.ts
 import type { PayloadRequest } from 'payload';
 import { Readable } from 'node:stream';
-import { getSingleStreamAndValidateFromBusboy } from '@/utils/http/requestProcesses';
-import { encryptStreamGCM } from '@/utils/data_processing/encryption';
-import { isValidUser } from '@/utils/http/auth';
-import { handleError, response } from '@/utils/http/response'; // Asumiendo que tienes estas funciones
+import { getSingleStreamAndValidateFromBusboy } from '@/shared/http/requestProcesses';
+import { encryptStreamGCM } from '@/shared/data_processing/encryption';
+import { isValidUser } from '@/shared/http/auth';
+import { handleError, response } from '@/shared/http/response';
+import { performance } from 'node:perf_hooks';
+
+import type { PayloadFileRequest } from '@/custom-types';
+import { createEncryptionResult } from '@/controllers/encryptionController';
 
 export async function encryptSingleStreamHandlerV2(req: PayloadRequest): Promise<Response> {
+  const errors: Array<string> = [];
   try {
-    const errors: Array<string> = [];
-
+    const t0 = performance.now();
     // 1️⃣ Auth
     const validUser = await isValidUser(req);
     if (validUser instanceof Response) return validUser;
 
     // 2️⃣ Obtener el stream, password y hacer validaciones en el proceso
-    const validationRules = [
-      'file-type-validation', // Validar tipo de archivo
-      'filename-validation', // Validar nombre de archivo
-      'password-strength' // Validar fortaleza de contraseña
-    ];
-    console.log('Validando:', validationRules);
+    const validationRules = ['file-type-validation', 'filename-validation', 'password-strength'];
     const { filename, stream, password } = await getSingleStreamAndValidateFromBusboy(req, errors, validationRules);
-    console.log('Validación completa:', { filename, stream, password });
 
     // 3️⃣ Verificar si hubo errores durante el parsing/validación
     if (errors.length > 0) return response(400, { error: errors }, 'Bad Request');
 
     // 4️⃣ Proceder con la encriptación si no hay errores
+
     const encName = `${filename}.enc`;
-    //console.log('Nombre del archivo encriptado:', encName);
-    const { output } = encryptStreamGCM(stream, password);
-    //console.log('Stream de salida encriptado listo.', output);
+    const { output, metaPromise } = encryptStreamGCM(stream, password);
+
+    // ANTES del return, programa el logging del registro:
+    metaPromise
+      .then(async (meta: { size?: number }) => {
+        const elapsedMs = Math.round(performance.now() - t0);
+
+        const ext = (() => {
+          const m = /\.([^.]+)$/.exec(filename);
+          return m ? m[1].toLowerCase() : undefined;
+        })();
+
+        const payloadFile: PayloadFileRequest = {
+          name: filename,
+          size: Number(meta?.size) || 0,
+          ext
+          // mimetype: 'application/octet-stream',  // opcional si no lo tienes
+        };
+        const r = await createEncryptionResult(req, payloadFile, elapsedMs, 'encrypt');
+        console.log('Se registro correctamente el registro: ', r);
+
+        if (r instanceof Response && !r.ok) {
+          console.warn('⚠️  No se pudo registrar la operación (single):', await r.text().catch(() => ''));
+        }
+      })
+      .catch((e) => console.warn('⚠️  metaPromise single encryption:', e));
     // Conversión del stream para la respuesta web
     const nodeOut = output as unknown as NodeJS.ReadableStream;
     const webOut = typeof (Readable as any).toWeb === 'function' ? (Readable as any).toWeb(nodeOut) : (nodeOut as any);

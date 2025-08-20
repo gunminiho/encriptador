@@ -12,9 +12,12 @@ async function detectFileTypeFromBlob(data: Uint8Array | Buffer<ArrayBufferLike>
       mimeType: type.mime
     };
   }
+
   // 2️⃣ Fallback por extensión
   const ext = fileName ? path.extname(fileName).slice(1).toLowerCase() : '*.lol';
   switch (ext) {
+    case 'pdf':
+      return { extension: 'pdf', mimeType: 'application/pdf' };
     case 'txt':
       return { extension: 'txt', mimeType: 'text/plain' };
     case 'csv':

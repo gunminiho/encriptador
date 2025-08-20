@@ -1,33 +1,5 @@
 import { ScryptOptions } from 'node:crypto';
 
-export type PayloadFileRequest = {
-  /**
-   * Context of the file when it was uploaded via client side.
-   */
-  clientUploadContext?: unknown;
-  data: Buffer;
-  mimetype: string;
-  name: string;
-  size: number;
-  tempFilePath?: string;
-  fieldName?: string;
-};
-
-export type MassiveEncryptionRequest = {
-  csvFile: PayloadFileRequest;
-  dataFiles: Array<PayloadFileRequest>;
-};
-
-export type SingleEncryptionRequest = {
-  file: PayloadFileRequest;
-  password: string;
-};
-
-export type MassiveEncryptionResult = {
-  zipStream: ReadableStream<Uint8Array>;
-  elapsedMs: number;
-};
-
 export type BinaryInput = ArrayBuffer | Uint8Array | Buffer;
 
 export type BinaryLike =
@@ -41,12 +13,6 @@ export interface EncryptionResult {
   missingPassword: number;
   failed: number;
   status: FileStatus[];
-}
-
-export interface DecryptionResult {
-  fileName: string;
-  blob: ArrayBuffer;
-  elapsedMs: number;
 }
 
 export const HWM = 1024 * 1024; // 1 MiB para todos los PassThrough (buen throughput)
@@ -110,19 +76,6 @@ export const EXTENSION_BLACKLIST = new Set([
 
 export type PasswordMap = Map<string, string>;
 
-export type FileEntryStream = { fieldname: string; filename: string; mimetype: string; stream: NodeReadable; tmpPath?: string };
-
-export type GcmMeta = { salt: Buffer; iv: Buffer; tag: Buffer; size: number };
-
-export type ZipManifestRecord = {
-  file_name: string;
-  size_bytes: number;
-  salt_b64: string;
-  iv_b64: string;
-  tag_b64: string;
-  error?: string;
-};
-
 export type FileStatus = { file: string; status?: 'error'; message: string } | { file: string; status: 'ok'; size: number } | { file: string; status: 'missing_password' };
 
 export type NodeReadable = NodeJS.ReadableStream;
@@ -132,6 +85,7 @@ export interface ParsedMassiveRequest {
   passwords: PasswordMap;
   totalFiles: number;
   totalSizeBytes: number;
+  passwordFile?: boolean; // Indica si se proporcionó un archivo CSV de contraseñas
   tempDir: string;
   fileList: FileEntryStream[]; // Para validaciones
 }
@@ -140,3 +94,67 @@ export interface ValidationResult {
   isValid: boolean;
   errors: string[];
 }
+
+export interface SimpleFileLike {
+  name: string;
+  size: number;
+}
+
+export type UploadRequestContext = {
+  request_id: string;
+  temp_dir: string;
+};
+
+export type DiskFileHandle = {
+  /** Nombre original saneado (con extensión) */
+  filename: string;
+  /** Ruta absoluta al archivo temporal en disco */
+  tmp_path: string;
+  /** Tamaño en bytes (stat al terminar de escribir) */
+  size_bytes: number;
+  /** Mimetype detectado (sniff o por extensión) */
+  mimetype?: string;
+  /** Extensión en minúsculas, sin punto (ej: 'pdf') */
+  ext?: string;
+  /** Campo form-data del que provino (opcional) */
+  field_name?: string;
+
+  /** Crear un Readable fresco desde tmp_path (evita guardar un stream ya consumido) */
+  openReadStream(): NodeReadable;
+};
+
+/** Lo mínimo que persistes a DB para la operación */
+export type PayloadFileRequest = {
+  name: string; // filename
+  size: number; // size_bytes
+  mimetype?: string; // opcional
+  ext?: string; // opcional
+};
+
+/** Entrada que consume el cifrado (stream + metadata) */
+export type FileEntryStream = {
+  fieldname: string;
+  filename: string;
+  size?: number;
+  mimetype?: string;
+  ext?: string;
+  /** Stream vivo que vas a cifrar (si prefieres fábrica, usa DiskFileHandle) */
+  stream: NodeReadable;
+  /** Ruta para limpiar */
+  tmpPath: string | undefined;
+};
+
+// export type MassivePipelineEvents = {
+//   on_file_ok?: (file: { name: string; size: number; ext?: string; mimetype?: string }) => void;
+// };
+
+export type FileOkEvent = { name: string; size: number; ext?: string; mimetype?: string };
+export type MassivePipelineEvents = { on_file_ok?: (ev: FileOkEvent) => void };
+
+export type MassivePipelineResult = {
+  webStream: ReadableStream; // lo que ya devuelves
+  stop: () => void; // lo que ya tienes
+  done: Promise<void>; // 🔥 NUEVO: se resuelve cuando el ZIP cierra
+};
+
+export type FileTypeCount = Record<string, number>;

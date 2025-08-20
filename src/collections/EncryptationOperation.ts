@@ -61,14 +61,15 @@ export const EncryptionOperations: CollectionConfig = {
       }
     },
     {
-      name: 'file_types',
-      type: 'json',
-      label: 'File Types',
-      required: false,
-      admin: {
-        position: 'sidebar',
-        readOnly: true
-      }
+      name: 'file_types', // ya lo tienes como array de text o similar
+      type: 'array',
+      fields: [{ name: 'value', type: 'text' }],
+      admin: { description: 'Lista única de extensiones' }
+    },
+    {
+      name: 'file_types_count',
+      type: 'json', // <- sencillo para guardar { pdf: 10, xlsx: 2, ... }
+      admin: { description: 'Conteo por tipo de archivo' }
     },
     {
       name: 'processing_time_ms',
@@ -127,21 +128,6 @@ export const EncryptionOperations: CollectionConfig = {
     ]
   },
   endpoints: [
-    // {
-    //   path: '/v1/encrypt', // =>   /api/encryption_operations/v1/encrypt
-    //   method: 'post',
-    //   handler: encryptHandler
-    // },
-    // {
-    //   path: '/v1/decrypt', // =>  /api/encryption_operations/v1/decrypt
-    //   method: 'post',
-    //   handler: decryptHandler
-    // },
-    // {
-    //   path: '/v1/massive-encrypt', // =>  /api/encryption_operations/v1/massive-encrypt
-    //   method: 'post',
-    //   handler: massiveEncryptionHandler
-    // },
     {
       path: '/v2/massive-encrypt', // =>  /api/encryption_operations/v2/massive-encrypt
       method: 'post',

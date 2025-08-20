@@ -2,6 +2,7 @@ import { Readable } from 'node:stream';
 import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 import type { Readable as NodeReadable } from 'node:stream';
 import { type BinaryInput, ZIP_LOG_STEP } from '@/custom-types';
+import { PayloadFileRequest, FileTypeCount } from '@/custom-types';
 
 /**
  * Convierte bytes a megabytes (base binaria, 1 MB = 1 048 576 bytes).
@@ -105,9 +106,9 @@ export function makeWebZipStream(nodeZipStream: NodeJS.ReadableStream) {
         chunks++;
         lastTs = Date.now();
         if (total >= ZIP_LOG_STEP || chunks % 16 === 0) {
-          console.log(`[webStream] enqueue: chunk=${u8.byteLength}B, total=${fmtMB(total)}, desiredSize=${controller.desiredSize}`);
+          //console.log(`[webStream] enqueue: chunk=${u8.byteLength}B, total=${fmtMB(total)}, desiredSize=${controller.desiredSize}`);
         }
-        if (controller.desiredSize !== null && controller.desiredSize <= 0) console.log('[webStream] backpressure');
+        //if (controller.desiredSize !== null && controller.desiredSize <= 0) console.log('[webStream] backpressure');
       });
       nodeZipStream.once('end', () => {
         //console.log('[webStream] end -> close');
@@ -133,3 +134,25 @@ export function makeWebZipStream(nodeZipStream: NodeJS.ReadableStream) {
 }
 
 export const removeEncExt = (name: string) => name.replace(/\.enc$/i, '') || name;
+
+export function normalizeExtFromName(name: string): string {
+  const m = /\.([^.]+)$/.exec(name);
+  return (m?.[1] ?? 'unknown').toLowerCase();
+}
+
+function extFromName(name: string): string {
+  const i = name.lastIndexOf('.');
+  return i >= 0 ? name.slice(i + 1).toLowerCase() : 'unknown';
+}
+
+export function buildFileTypeStats(files: ReadonlyArray<PayloadFileRequest>): {
+  uniqueTypes: string[];
+  counts: FileTypeCount;
+} {
+  const counts: FileTypeCount = {};
+  for (const f of files) {
+    const ext = (f.ext?.toLowerCase() ?? extFromName(f.name)) || 'unknown';
+    counts[ext] = (counts[ext] ?? 0) + 1;
+  }
+  return { uniqueTypes: Object.keys(counts), counts };
+}

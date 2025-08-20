@@ -217,7 +217,19 @@ export interface EncryptionOperation {
   operation_type: 'encrypt' | 'decrypt';
   file_count: number;
   total_size_mb: number;
+  /**
+   * Lista única de extensiones
+   */
   file_types?:
+    | {
+        value?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Conteo por tipo de archivo
+   */
+  file_types_count?:
     | {
         [k: string]: unknown;
       }
@@ -435,7 +447,13 @@ export interface EncryptionOperationsSelect<T extends boolean = true> {
   operation_type?: T;
   file_count?: T;
   total_size_mb?: T;
-  file_types?: T;
+  file_types?:
+    | T
+    | {
+        value?: T;
+        id?: T;
+      };
+  file_types_count?: T;
   processing_time_ms?: T;
   encryption_method?: T;
   success?: T;

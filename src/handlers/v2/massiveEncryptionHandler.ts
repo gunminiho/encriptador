@@ -57,7 +57,6 @@ export async function massiveEncryptionHandlerV2(req: PayloadRequest): Promise<R
         const elapsedMs = Math.round(performance.now() - t0);
         if (ok_files.length > 0) {
           const r = await createEncryptionResult(req, ok_files, elapsedMs, 'encrypt');
-          console.log('Se registró correctamente la operación masiva:', r);
           if (r instanceof Response && !r.ok) {
             console.warn('⚠️  No se pudo registrar la operación (massive):', await r.text().catch(() => ''));
           }

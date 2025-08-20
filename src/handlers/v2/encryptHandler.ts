@@ -47,8 +47,6 @@ export async function encryptSingleStreamHandlerV2(req: PayloadRequest): Promise
           // mimetype: 'application/octet-stream',  // opcional si no lo tienes
         };
         const r = await createEncryptionResult(req, payloadFile, elapsedMs, 'encrypt');
-        console.log('Se registro correctamente el registro: ', r);
-
         if (r instanceof Response && !r.ok) {
           console.warn('⚠️  No se pudo registrar la operación (single):', await r.text().catch(() => ''));
         }

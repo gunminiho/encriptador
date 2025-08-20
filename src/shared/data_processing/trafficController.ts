@@ -134,7 +134,7 @@ async function processFileWithSemaphoreAndCleanup(
         status: 'missing_password' // asegúrate de ser consistente con el resto del código
       });
 
-      console.warn(`⚠️  Password faltante para: ${fileEntry.filename}`);
+      //console.warn(`⚠️  Password faltante para: ${fileEntry.filename}`);
       // consumimos el stream para no bloquear el pipeline
       fileEntry.stream.resume();
       return;

@@ -12,6 +12,14 @@ import { tap } from '@/shared/data_processing/trafficController';
 export function decryptStreamGCM(input: NodeReadable, password: string) {
   const out = new PassThrough({ highWaterMark: HWM });
 
+  // Error “cripto” que tu handleError reconoce (por 'code')
+  const cryptoErr = () => {
+    const e = new Error('Contraseña incorrecta o archivo cifrado inválido') as Error & { code?: string; status?: number };
+    e.code = 'ERR_OSSL_EVP_BAD_DECRYPT';
+    e.status = 422; // si prefieres 400, cámbialo aquí
+    return e;
+  };
+
   const metaPromise = (async () => {
     const { header, rest } = await readExactlyHeader(input, SALT_LEN + IV_LEN);
     const salt = header.subarray(0, SALT_LEN);
@@ -20,14 +28,17 @@ export function decryptStreamGCM(input: NodeReadable, password: string) {
     const key = await scryptAsync(password, salt, keyLen, SCRYPT);
     const decipher = createDecipheriv('aes-256-gcm', key, iv, { authTagLength: TAG_LEN });
 
-    // Mantén el tag al final del stream
     const hold = new HoldbackTransform(TAG_LEN);
 
-    // Propaga errores para poder rechazarlos
+    // Solo errores de hold/decipher (auth fallida)
     const errorPromise = new Promise<never>((_, reject) => {
-      hold.once('error', reject);
-      decipher.once('error', reject); // ej. "unable to authenticate data"
-      out.once('error', reject);
+      const r = () => reject(cryptoErr());
+      hold.once('error', r);
+      decipher.once('error', r); // "unable to authenticate data", etc.
+      // NO escuchar 'out.error' para que destroy(e) no rebote otro rechazo
+    });
+    (errorPromise as Promise<never>).catch(() => {
+      /* swallow to avoid unhandledRejection */
     });
 
     rest.pipe(hold);
@@ -36,28 +47,30 @@ export function decryptStreamGCM(input: NodeReadable, password: string) {
 
     const tag: Buffer = await new Promise<Buffer>((resolve, reject) => {
       (hold as any).once('trailer', (t: Buffer) => resolve(t));
-      hold.once('error', reject);
+      hold.once('error', () => reject(cryptoErr()));
     });
 
-    // Establecer tag **antes** de finalizar
     decipher.setAuthTag(tag);
 
-    // Finaliza el decipher de forma controlada (puede lanzar si auth falla)
     try {
-      decipher.end();
-    } catch (e) {
-      out.destroy(e as Error);
-      throw e;
+      decipher.end(); // puede lanzar si GCM falla
+    } catch {
+      const e = cryptoErr();
+      out.destroy(e); // propaga error "cripto" al pipeline (no "Premature close")
+      throw e; // rechaza metaPromise con el mismo error
     }
 
-    // Espera a que termine el flujo o error
     await Promise.race([new Promise<void>((resolve) => out.once('finish', resolve)), errorPromise]);
 
     return { salt, iv, tag };
-  })().catch((err) => {
-    out.destroy(err as Error);
-    throw err;
+  })().catch((_err) => {
+    const e = cryptoErr();
+    if (!out.destroyed) out.destroy(e); // idem: error "cripto" al pipeline
+    throw e; // metaPromise queda rejected con el mismo error
   });
+
+  // 👇👇 **Línea clave para silenciar el "unhandledRejection"**
+  void (metaPromise as Promise<unknown>).catch(() => {});
 
   return { output: out, metaPromise };
 }

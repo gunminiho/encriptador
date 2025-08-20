@@ -82,11 +82,19 @@ export function streamFileResponse(
 
 export function handleError(e: unknown, responseMessage: string, endpoint: string, status = 500): Response {
   const err = toError(e);
-
+  const message = err instanceof Error ? err.message : String(err);
+  const isCryptoErr = /unable to authenticate data|bad decrypt|auth|integrity/i.test(message) || (err as any)?.code === 'ERR_OSSL_EVP_BAD_DECRYPT';
   // Log estructurado (solo servidor)
+  
   const error = err.stack?.split('\n');
-  console.log(`[endpoint:${endpoint}] ERROR:`, { error: error?.at(0), stack: error?.slice(1, 7).join('\n') });
+  if (!isCryptoErr) {
+    console.log(`[endpoint:${endpoint}] ERROR:`, { error: error?.at(0), stack: error?.slice(1, 7).join('\n') });
+  }
 
   // Respuesta estándar al cliente (no filtrar stack)
-  return response(status, { error: responseMessage }, status === 500 ? 'Internal Server Error' : 'Request Error');
+  return response(
+    status === 500 ? 500 : isCryptoErr ? 422 : status,
+    { error: responseMessage },
+    status === 500 ? 'Internal Server Error' : isCryptoErr ? 'Unprocessable Entity' : 'Request Error'
+  );
 }

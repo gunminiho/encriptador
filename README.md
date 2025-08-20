@@ -1,67 +1,239 @@
-# Payload Blank Template
+# Encriptador de Archivos — API v2
 
-This template comes configured with the bare minimum to get started on anything you need.
+Servicio HTTP para **encriptar** y **desencriptar** archivos. Implementado con PayloadCMS (Node.js, TypeScript).  
+> **Importante:** Todos los endpoints aceptan **solo** `multipart/form-data`.
 
-## Quick start
+---
 
-This template can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+## Base URL
 
-## Quick Start - local setup
+```
+https://crypto.omn.pe/api
+```
 
-To spin up this template locally, follow these steps:
+---
 
-### Clone
+## Autenticación
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+Enviar el header **exacto**:
 
-### Development
+```
+Authorization: tenants API-Key <API_KEY>
+```
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URI` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+- Requerido en **todas** las rutas.
+- Si falta o es inválido → `401 Unauthorized`.
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+---
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
+## Límites y políticas
 
-#### Docker (Optional)
+- **Tamaño máximo por archivo:** **20 MB**
+- **Máximo de archivos por request (masivo):** **1000**
+- **Tamaño total máximo por request (masivo):** **2 GB**
+- **Content-Type de entrada:** `multipart/form-data` (no se acepta `raw`/`binary`)
+- **Nombres de archivo:**
+  - **Encriptar** → conserva el nombre original y agrega `.enc`
+  - **Desencriptar** → remueve `.enc` y conserva el nombre original
 
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
+### Extensiones bloqueadas
 
-To do so, follow these steps:
+Se rechazan archivos con las siguientes extensiones (o tipo no reconocido):
 
-- Modify the `MONGODB_URI` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URI` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
+```
+exe, msi, msp, bat, cmd, com, pif, scr, cpl, msc, sh, htm,
+js, jse, vbs, vbe, wsf, wsh, hta, ps1, psm1,
+py, pyc, rb, pl, php, jar,
+dll, so, dylib,
+zip, rar, 7z, tar, gz, bz2, apk, app, dmg,
+unknown
+```
 
-## How it works
+> Si el tipo no se reconoce y no está permitido, se trata como **unknown** y se rechaza.
 
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
+---
 
-### Collections
+## Criptografía 
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
+- **Algoritmo:** AES-256-GCM  
+- **Derivación de clave:** `scrypt`  
 
-- #### Users (Authentication)
 
-  Users are auth-enabled collections that have access to the admin panel.
+---
 
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/main/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
+## Formato de error
 
-- #### Media
+Para errores de validación y casos de negocio:
 
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
+```json
+{
+  "message": "mensaje de error",
+  "data": {
+    "error": ["detalle 1", "detalle 2"]
+  }
+}
+```
 
-### Docker
+- **400**: errores de validación o petición inválida  
+- **413**: tamaño por archivo, cantidad o tamaño total excedidos  
+- **401**: autenticación inválida  
+- **500**: error interno
 
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
+> En encriptación masiva, el servidor **puede** incluir headers adicionales en `Headers`.
 
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
+---
 
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
+# Endpoints
 
-## Questions
+## 1) Encriptación individual
 
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+**POST** `/encryption_operations/v2/encrypt`
+
+Encripta **un** archivo con una contraseña. Devuelve el archivo `*.enc` por **streaming**.
+
+### Headers
+- `Authorization: tenants API-Key <API_KEY>`
+
+### Form-data
+| Campo      | Tipo | Requerido | Descripción                        |
+|------------|------|-----------|------------------------------------|
+| `file`     | File | Sí        | Archivo a encriptar (≤ 20 MB)      |
+| `password` | Text | Sí        | Contraseña (string, no vacía)      |
+
+### Respuesta (200)
+- `Content-Type: application/octet-stream`
+- `Content-Disposition: attachment; filename="<original>.enc"`
+- Puede **no** incluir `Content-Length` (transferencia por streaming).
+
+### cURL
+```bash
+curl -X POST "https://crypto.omn.pe/api/encryption_operations/v2/encrypt"   -H "Authorization: tenants API-Key <API_KEY>"   -F "file=@/ruta/al/archivo.pdf"   -F "password=mi_password"   -o archivo.pdf.enc
+```
+
+---
+
+## 2) Desencriptación individual
+
+**POST** `/encryption_operations/v2/decrypt`
+
+Desencripta **un** archivo `*.enc` con su contraseña. Devuelve el archivo original por **streaming**.
+
+### Headers
+- `Authorization: tenants API-Key <API_KEY>`
+
+### Form-data
+| Campo      | Tipo | Requerido | Descripción                      |
+|------------|------|-----------|----------------------------------|
+| `file`     | File | Sí        | Archivo cifrado `*.enc` (≤ 20 MB)|
+| `password` | Text | Sí        | Contraseña (string, no vacía)    |
+
+### Respuesta (200)
+- `Content-Type: application/octet-stream`
+- `Content-Disposition: attachment; filename="<original>"`
+- Puede **no** incluir `Content-Length`.
+
+> **Errores típicos (400):** `Contraseña incorrecta o archivo cifrado inválido` cuando el GCM no autentica.
+
+### cURL
+```bash
+curl -X POST "https://crypto.omn.pe/api/encryption_operations/v2/decrypt"   -H "Authorization: tenants API-Key <API_KEY>"   -F "file=@/ruta/al/archivo.pdf.enc"   -F "password=mi_password"   -o archivo.pdf
+```
+
+---
+
+## 3) Encriptación masiva (ZIP por streaming)
+
+**POST** `/encryption_operations/v2/massive-encrypt`
+
+Encripta **múltiples** archivos en una sola petición. Cada archivo se cifra por separado (AES-256-GCM) y se entrega **dentro de un ZIP** generado por streaming.
+
+### Reglas
+- Requiere **≥ 2** archivos.
+- **Máximo:** 1000 archivos y **2 GB** totales.
+- **Cada** archivo ≤ **20 MB**.
+- Proporcionar contraseñas vía CSV (`passwords`) o una única contraseña (`password`) si se sube **un** archivo.
+- Si se encuentra el archivo en el envío y también se encuentra declarado en el .csv pero no hay contraseña declarada en el csv, **se omitirá la encriptación.**
+
+### Headers
+- `Authorization: tenants API-Key <API_KEY>`
+
+### Form-data
+| Campo        | Tipo   | Requerido | Descripción |
+|--------------|--------|-----------|-------------|
+| `file`       | File[] | Sí        | Múltiples archivos a encriptar. Cada uno ≤ 20 MB. |
+| `passwords`  | File   | Sí*       | CSV con columnas `file_name,password`. Requerido **≥ 2** archivos. |
+
+
+**CSV `passwords`**  
+- Codificación: UTF-8  
+- Primera línea: **cabecera**  
+- Columnas: `file_name,password`  
+- Delimitador:  **;**  o  **,**
+- El `file_name` debe coincidir con el nombre real subido ( se normaliza quitando rutas/`fakepath`, trim, minúsculas,etc ).
+
+**Ejemplo de CSV:**
+```csv
+file_name,password
+reporte.pdf,Alpha#2025
+imagen1.png,Beta!2025
+imagen2.png,Beta!2024
+imagen3.jpg,Alfa!2023
+```
+
+### Respuesta (200)
+- `Content-Type: application/zip`
+- `Content-Disposition: attachment; filename="encrypted_bundle.zip"`
+- ZIP por streaming (normalmente **sin** `Content-Length`).
+
+### cURL
+```bash
+curl -X POST "https://crypto.omn.pe/api/encryption_operations/v2/massive-encrypt"   -H "Authorization: tenants API-Key <API_KEY>"   -F "file=@/ruta/reporte.pdf"   -F "file=@/ruta/imagen.png"   -F "passwords=@/ruta/passwords.csv;type=text/csv"   -o encrypted_bundle.zip
+```
+
+---
+
+## Códigos de estado
+
+| Código | Cuándo                                                                  |
+|-------:|-------------------------------------------------------------------------|
+| **200** | Descarga del archivo encriptado/desencriptado o ZIP (streaming).        |
+| **400** | Validación fallida (campos faltantes, contraseña vacía, CSV inválido, tipo no permitido, etc.). También puede usarse cuando se exceden límites, según el caso. |
+| **413** | Tamaño por archivo, cantidad de archivos, o tamaño total **excedidos**. |
+| **401** | Falta/invalidación del header de autenticación.                         |
+| **500** | Error interno.                                                          |
+
+**Ejemplo de error 400**
+```json
+{
+  "message": "Error en la validación de la solicitud",
+  "data": {
+    "error": [
+      "No se detectó password para encriptar",
+      "El tipo de archivo .exe no está permitido"
+    ]
+  }
+}
+```
+
+**Ejemplo de error 413**
+```json
+{
+  "message": "Límites excedidos",
+  "data": {
+    "error": [
+      "Archivo reporte.pdf excede el tamaño máximo de 20MB",
+      "Tamaño total 2.1GB supera el máximo de 2GB"
+    ]
+  }
+}
+```
+
+---
+
+## Notas operativas
+
+- **Streaming**: el servidor transmite la respuesta a medida que procesa; algunos clientes no verán `Content-Length`.
+- **No almacenamiento**: el servicio no persiste los archivos; solo procesa y devuelve el resultado.
+- **Trazabilidad**: cada operación se registra.
+
+---

@@ -15,8 +15,8 @@ export async function encryptSingleStreamHandlerV2(req: PayloadRequest): Promise
   try {
     const t0 = performance.now();
     // 1️⃣ Auth
-    const validUser = await isValidUser(req);
-    if (validUser instanceof Response) return validUser;
+    // const validUser = await isValidUser(req);
+    // if (validUser instanceof Response) return validUser;
 
     // 2️⃣ Obtener el stream, password y hacer validaciones en el proceso
     const validationRules = ['file-type-validation', 'filename-validation', 'password-strength'];

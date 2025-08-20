@@ -40,7 +40,7 @@ export async function decryptSingleStreamHandlerV2(req: PayloadRequest): Promise
     // 2) Verifica autenticación GCM (si falla, lanza)
     await metaPromise;
 
-    // 2) ✔️ Logging “decrypt” (antes del return)
+    // 2) ✔️ Logea operacion antes del return
     try {
       const st = await fsp.stat(outPath);
       const elapsed_ms = Math.round(performance.now() - t0);
@@ -55,7 +55,6 @@ export async function decryptSingleStreamHandlerV2(req: PayloadRequest): Promise
         size: Number(st.size) || 0,
         ext
       };
-
       const r = await createEncryptionResult(req, payload_file, elapsed_ms, 'decrypt');
       if (r instanceof Response && !r.ok) {
         console.warn('⚠️  No se pudo registrar la operación (decrypt):', await r.text().catch(() => ''));

@@ -5,7 +5,7 @@ export const Tenants: CollectionConfig = {
   slug: 'tenants',
   auth: {
     useAPIKey: true,
-    disableLocalStrategy: true, // desactiva el login con email/password
+    //disableLocalStrategy: true, // desactiva el login con email/password
   },
   timestamps: true,
   admin: {

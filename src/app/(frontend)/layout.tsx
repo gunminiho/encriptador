@@ -1,18 +1,19 @@
-import React from 'react'
-import './styles.css'
+import React from 'react';
+import './styles.css';
 
 export const metadata = {
-  description: 'A blank template using Payload in a Next.js app.',
-  title: 'Payload Blank Template',
-}
+  description: 'CRYPTO OMN.PE',
+  title: 'CRYPTO OMN.PE',
+  icons: [{ rel: 'icon', url: '/assets/omn_logo.svg' }]
+};
 
 export default async function RootLayout(props: { children: React.ReactNode }) {
-  const { children } = props
+  const { children } = props;
   return (
-    <html lang="en">
+    <html lang="es">
       <body>
         <main>{children}</main>
       </body>
     </html>
-  )
+  );
 }

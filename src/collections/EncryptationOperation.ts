@@ -1,8 +1,5 @@
 // src/collections/EncryptionOperations.ts
 import { CollectionConfig } from 'payload';
-// import { encryptHandler } from '@/handlers/v1/encryptHandler';
-// import { decryptHandler } from '@/handlers/v1/decryptHandler';
-// import { massiveEncryptionHandler } from '@/handlers/v1/massiveEncrypt';
 import { decryptSingleStreamHandlerV2 } from '@/handlers/v2/decryptHandler';
 import { encryptSingleStreamHandlerV2 } from '@/handlers/v2/encryptHandler';
 import { massiveEncryptionHandlerV2 } from '@/handlers/v2/massiveEncryptionHandler';
@@ -14,9 +11,8 @@ export const EncryptionOperations: CollectionConfig = {
     useAsTitle: 'operation_title' // ← ahora es texto
   },
   fields: [
-    // 1) Título derivado, solo lectura
     {
-      name: 'operation_title',
+      name: 'operation_title', // 1) Título derivado, solo lectura
       type: 'text',
       admin: { readOnly: true }
     },
@@ -61,7 +57,7 @@ export const EncryptionOperations: CollectionConfig = {
       }
     },
     {
-      name: 'file_types', // ya lo tienes como array de text o similar
+      name: 'file_types',
       type: 'array',
       fields: [{ name: 'value', type: 'text' }],
       admin: { description: 'Lista única de extensiones' }

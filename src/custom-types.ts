@@ -95,34 +95,6 @@ export interface ValidationResult {
   errors: string[];
 }
 
-export interface SimpleFileLike {
-  name: string;
-  size: number;
-}
-
-export type UploadRequestContext = {
-  request_id: string;
-  temp_dir: string;
-};
-
-export type DiskFileHandle = {
-  /** Nombre original saneado (con extensión) */
-  filename: string;
-  /** Ruta absoluta al archivo temporal en disco */
-  tmp_path: string;
-  /** Tamaño en bytes (stat al terminar de escribir) */
-  size_bytes: number;
-  /** Mimetype detectado (sniff o por extensión) */
-  mimetype?: string;
-  /** Extensión en minúsculas, sin punto (ej: 'pdf') */
-  ext?: string;
-  /** Campo form-data del que provino (opcional) */
-  field_name?: string;
-
-  /** Crear un Readable fresco desde tmp_path (evita guardar un stream ya consumido) */
-  openReadStream(): NodeReadable;
-};
-
 /** Lo mínimo que persistes a DB para la operación */
 export type PayloadFileRequest = {
   name: string; // filename
@@ -144,17 +116,7 @@ export type FileEntryStream = {
   tmpPath: string | undefined;
 };
 
-// export type MassivePipelineEvents = {
-//   on_file_ok?: (file: { name: string; size: number; ext?: string; mimetype?: string }) => void;
-// };
-
 export type FileOkEvent = { name: string; size: number; ext?: string; mimetype?: string };
 export type MassivePipelineEvents = { on_file_ok?: (ev: FileOkEvent) => void };
-
-export type MassivePipelineResult = {
-  webStream: ReadableStream; // lo que ya devuelves
-  stop: () => void; // lo que ya tienes
-  done: Promise<void>; // 🔥 NUEVO: se resuelve cuando el ZIP cierra
-};
 
 export type FileTypeCount = Record<string, number>;

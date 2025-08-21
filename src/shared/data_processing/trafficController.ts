@@ -189,8 +189,6 @@ async function processFileWithSemaphoreAndCleanup(
   }
 }
 
-// Reemplaza la firma y el cuerpo de createMassiveEncryptionPipeline por esto:
-
 export async function createMassiveEncryptionPipeline(
   parsedData: ParsedMassiveRequest,
   events?: MassivePipelineEvents

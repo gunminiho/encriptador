@@ -1,7 +1,6 @@
 import { fileTypeFromBuffer } from 'file-type';
 import { SALT_LEN, IV_LEN, TAG_LEN, EXTENSION_BLACKLIST } from '@/custom-types';
 import path from 'path';
-//,
 
 async function detectFileTypeFromBlob(data: Uint8Array | Buffer<ArrayBufferLike> | undefined, fileName: string | undefined): Promise<{ extension: string; mimeType: string }> {
   // 1️⃣ Intento magic-number
@@ -28,9 +27,8 @@ async function detectFileTypeFromBlob(data: Uint8Array | Buffer<ArrayBufferLike>
       return { extension: 'xlsx', mimeType: 'text/text+xml' };
     case 'enc':
       //Validación mínima para un .enc
-      if (data && data.byteLength < SALT_LEN + IV_LEN + TAG_LEN) {
-        throw new Error('Archivo .enc demasiado pequeño para ser válido');
-      }
+      if (data && data.byteLength < SALT_LEN + IV_LEN + TAG_LEN) return { extension: 'unknown', mimeType: 'text/unknown' };
+      // Si es un archivo .enc, asumimos que es un archivo encriptado
       return { extension: 'enc', mimeType: 'application/octet-stream' };
     case 'html':
       return { extension: 'html', mimeType: 'text/html' };

@@ -6,7 +6,6 @@ import path from 'path';
 import { buildConfig } from 'payload';
 import { fileURLToPath } from 'url';
 import sharp from 'sharp';
-
 import { Users } from './collections/Users';
 import { Media } from './collections/Media';
 import { Tenants } from './collections/Tenant';
@@ -25,8 +24,28 @@ export default buildConfig({
   cors: '*',
   admin: {
     user: Users.slug,
-    importMap: {
-      baseDir: path.resolve(dirname)
+    importMap: { baseDir: path.resolve(dirname) }, // ok dejarlo así
+    meta: {
+      title: 'Omn Admin',
+      titleSuffix: ' — Encriptador',
+      description: 'Panel de administración del encriptador OMN',
+      icons: [{ rel: 'icon', url: '/assets/omn_logo.svg' }],
+      openGraph: {
+        siteName: 'OMN Admin',
+        title: 'OMN Admin',
+        description: 'Panel de administración del encriptador OMN',
+        images: [{ url: '/assets/omn_logo.svg', width: 1200, height: 630 }]
+      },
+      robots: 'noindex, nofollow'
+      // opcional:
+      // defaultOGImageType: 'dynamic' | 'static' | 'off',
+    },
+    components: {
+      graphics: {
+        // 👉 apunta a TUS COMPONENTES .tsx (no a imágenes)
+        Logo: './AdminLogo.tsx'
+        // Icon: '/components/Favicon.tsx'
+      }
     }
   },
   collections: [Users, Media, Tenants, EncryptionOperations, ResourceUsageDaily, ErrorLogs],

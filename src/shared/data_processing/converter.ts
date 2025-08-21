@@ -39,23 +39,6 @@ export function toNodeReadable(req: unknown): NodeReadable {
 
 /**
  * Convierte bytes a megabytes (base binaria, 1 MB = 1 048 576 bytes).
- * @param data  Recibe un tipo BinaryInput.
- * @returns  Retorna un tipo ArrayBuffer.
- */
-export const toArrayBuffer = (data: BinaryInput): ArrayBuffer => {
-  if (data instanceof ArrayBuffer) return data;
-
-  const u8 = data as Uint8Array; // Buffer también cae aquí
-  // Si ya es un ArrayBuffer “puro” y alineado, úsalo; si no, copia
-  if (u8.buffer instanceof ArrayBuffer && u8.byteOffset === 0 && u8.byteLength === u8.buffer.byteLength) {
-    return u8.buffer;
-  }
-  // Copia segura → garantiza ArrayBuffer (no SharedArrayBuffer)
-  return u8.slice().buffer;
-};
-
-/**
- * Convierte bytes a megabytes (base binaria, 1 MB = 1 048 576 bytes).
  * @param e  Recibe tipo de error desconocido.
  * @returns  Retorna un tipo Error específico.
  */
@@ -134,11 +117,6 @@ export function makeWebZipStream(nodeZipStream: NodeJS.ReadableStream) {
 }
 
 export const removeEncExt = (name: string) => name.replace(/\.enc$/i, '') || name;
-
-export function normalizeExtFromName(name: string): string {
-  const m = /\.([^.]+)$/.exec(name);
-  return (m?.[1] ?? 'unknown').toLowerCase();
-}
 
 function extFromName(name: string): string {
   const i = name.lastIndexOf('.');

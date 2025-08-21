@@ -1,5 +1,5 @@
 // src/collections/ErrorLogs.ts
-import { CollectionConfig } from 'payload'
+import { CollectionConfig } from 'payload';
 
 export const ErrorLogs: CollectionConfig = {
   slug: 'error_logs',
@@ -9,43 +9,43 @@ export const ErrorLogs: CollectionConfig = {
       name: 'tenant_id',
       type: 'relationship',
       relationTo: 'tenants',
-      required: true,
+      required: true
     },
     {
       name: 'operation_id',
       type: 'relationship',
       relationTo: 'encryption_operations',
-      required: false,
+      required: false
     },
     {
       name: 'error_code',
       type: 'text',
       label: 'Error Code',
-      required: false,
+      required: false
     },
     {
       name: 'error_type',
       type: 'text',
       label: 'Error Type',
-      required: false,
+      required: false
     },
     {
       name: 'error_message',
       type: 'textarea',
       label: 'Error Message',
-      required: true,
+      required: true
     },
     {
       name: 'stack_trace',
       type: 'textarea',
       label: 'Stack Trace',
-      required: false,
+      required: false
     },
     {
       name: 'context_data',
       type: 'json',
       label: 'Context Data',
-      required: false,
+      required: false
     },
     {
       name: 'level',
@@ -55,10 +55,10 @@ export const ErrorLogs: CollectionConfig = {
         { label: 'INFO', value: 'INFO' },
         { label: 'WARN', value: 'WARN' },
         { label: 'ERROR', value: 'ERROR' },
-        { label: 'FATAL', value: 'FATAL' },
+        { label: 'FATAL', value: 'FATAL' }
       ],
       required: true,
-      defaultValue: 'ERROR',
+      defaultValue: 'ERROR'
     },
     {
       name: 'error_timestamp',
@@ -67,8 +67,8 @@ export const ErrorLogs: CollectionConfig = {
       required: true,
       admin: {
         date: { pickerAppearance: 'dayAndTime' },
-        position: 'sidebar',
-      },
+        position: 'sidebar'
+      }
     },
     {
       name: 'error_date',
@@ -77,8 +77,8 @@ export const ErrorLogs: CollectionConfig = {
       required: true,
       admin: {
         date: { pickerAppearance: 'dayAndTime' },
-        position: 'sidebar',
-      },
-    },
-  ],
-}
+        position: 'sidebar'
+      }
+    }
+  ]
+};

@@ -11,7 +11,6 @@ const AUTH_RE = new RegExp(`^${TENANTS_SLUG}\\s+API-Key\\s+(.+)$`);
 // ---------- Type guards (req.user) ----------
 export function isAdminReq(req: PayloadRequest): req is PayloadRequest & { user: AdminUser } {
   const u = req.user as any;
-  req.payload.logger.info('Checking admin access for user:', u);
   return !!u && u.collection === USERS_SLUG && u.role === 'admin';
 }
 export function isUsersReq(req: PayloadRequest): req is PayloadRequest & { user: AdminUser | RegularUser } {

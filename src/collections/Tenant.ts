@@ -1,29 +1,35 @@
-import type { CollectionConfig } from 'payload'
-//import { generateApiKey, generateApiSecret } from '@/utils/crypto'
+import type { CollectionConfig } from 'payload';
+import { onlyAdmins } from '@/shared/http/auth';
 
 export const Tenants: CollectionConfig = {
   slug: 'tenants',
   auth: {
     useAPIKey: true,
-    //disableLocalStrategy: true, // desactiva el login con email/password
+    disableLocalStrategy: true
   },
   timestamps: true,
+  access: {
+    read: onlyAdmins,
+    create: onlyAdmins,
+    update: onlyAdmins,
+    delete: onlyAdmins
+  },
   admin: {
-    useAsTitle: 'name',
+    useAsTitle: 'name'
   },
   fields: [
     {
       name: 'name',
       type: 'text',
       label: 'Tenant Name',
-      required: true,
+      required: true
     },
     {
       name: 'email',
       type: 'email',
       label: 'Tenant Email',
       required: true,
-      unique: true,
+      unique: true
     },
     {
       name: 'state',
@@ -33,8 +39,8 @@ export const Tenants: CollectionConfig = {
       required: true,
       admin: {
         description: 'Tenant status',
-        readOnly: true,
-      },
-    },
-  ],
-}
+        readOnly: true
+      }
+    }
+  ]
+};

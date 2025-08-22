@@ -1,7 +1,7 @@
 import { Readable } from 'node:stream';
 import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 import type { Readable as NodeReadable } from 'node:stream';
-import { type BinaryInput, ZIP_LOG_STEP } from '@/custom-types';
+import { ZIP_LOG_STEP } from '@/custom-types';
 import { PayloadFileRequest, FileTypeCount } from '@/custom-types';
 
 /**

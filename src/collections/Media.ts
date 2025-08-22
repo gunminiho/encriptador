@@ -1,16 +1,20 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig } from 'payload';
+import { onlyAdmins } from '@/shared/http/auth';
 
 export const Media: CollectionConfig = {
   slug: 'media',
   access: {
-    read: () => true,
+    read: onlyAdmins,
+    create: onlyAdmins,
+    update: onlyAdmins,
+    delete: onlyAdmins
   },
   fields: [
     {
       name: 'alt',
       type: 'text',
-      required: true,
-    },
+      required: true
+    }
   ],
-  upload: true,
-}
+  upload: true
+};

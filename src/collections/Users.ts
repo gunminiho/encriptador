@@ -1,11 +1,18 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig } from 'payload';
+import { onlyAdmins } from '@/shared/http/auth';
 
 export const Users: CollectionConfig = {
   slug: 'users',
   admin: {
-    useAsTitle: 'email',
+    useAsTitle: 'email'
   },
   auth: true,
+    access: {
+      read: onlyAdmins,
+      create: onlyAdmins,
+      update: onlyAdmins,
+      delete: onlyAdmins
+    },
   fields: [
     // Email added by default
     // Add more fields as needed
@@ -14,10 +21,10 @@ export const Users: CollectionConfig = {
       type: 'select',
       options: [
         { label: 'Admin', value: 'admin' },
-        { label: 'User', value: 'user' },
+        { label: 'User', value: 'user' }
       ],
       defaultValue: 'user',
-      label: 'Rol',
-    },
-  ],
-}
+      label: 'Rol'
+    }
+  ]
+};

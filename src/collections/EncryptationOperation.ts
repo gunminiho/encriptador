@@ -3,12 +3,19 @@ import { CollectionConfig } from 'payload';
 import { decryptSingleStreamHandlerV2 } from '@/handlers/v2/decryptHandler';
 import { encryptSingleStreamHandlerV2 } from '@/handlers/v2/encryptHandler';
 import { massiveEncryptionHandlerV2 } from '@/handlers/v2/massiveEncryptionHandler';
+import { onlyAdmins } from '@/shared/http/auth';
 
 export const EncryptionOperations: CollectionConfig = {
   slug: 'encryption_operations',
   timestamps: true,
+  access: {
+    read: onlyAdmins,
+    create: onlyAdmins,
+    update: onlyAdmins,
+    delete: onlyAdmins
+  },
   admin: {
-    useAsTitle: 'operation_title' // ← ahora es texto
+    useAsTitle: 'operation_title'
   },
   fields: [
     {
@@ -139,5 +146,18 @@ export const EncryptionOperations: CollectionConfig = {
       method: 'post',
       handler: encryptSingleStreamHandlerV2
     }
+  ],
+  indexes: [
+    // 1) Ventana temporal + orden/paginado estable (match con sort del job)
+    { fields: ['operation_timestamp', 'createdAt'] },
+
+    // 2) Dashboards y listados por tenant (recientes por tenant)
+    { fields: ['tenant_id', 'operation_timestamp'] },
+
+    // 3) Reportes por tipo en ventanas de tiempo
+    { fields: ['operation_type', 'operation_timestamp'] },
+
+    // 4) Métricas por éxito/fracaso en ventanas de tiempo
+    { fields: ['success', 'operation_timestamp'] }
   ]
 };

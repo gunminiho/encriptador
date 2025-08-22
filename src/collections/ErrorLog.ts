@@ -1,9 +1,16 @@
 // src/collections/ErrorLogs.ts
 import { CollectionConfig } from 'payload';
+import { onlyAdmins } from '@/shared/http/auth';
 
 export const ErrorLogs: CollectionConfig = {
   slug: 'error_logs',
   timestamps: true,
+  access: {
+    read: onlyAdmins,
+    create: onlyAdmins,
+    update: onlyAdmins,
+    delete: onlyAdmins
+  },
   fields: [
     {
       name: 'tenant_id',

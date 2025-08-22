@@ -117,6 +117,34 @@ export type FileEntryStream = {
 };
 
 export type FileOkEvent = { name: string; size: number; ext?: string; mimetype?: string };
+
 export type MassivePipelineEvents = { on_file_ok?: (ev: FileOkEvent) => void };
 
 export type FileTypeCount = Record<string, number>;
+export interface UsageAccumulator {
+  tenant_id: string;
+  total_operations: number;
+  encrypt_operations: number;
+  decrypt_operations: number;
+  total_mb_processed: number; // MB
+  total_files_processed: number;
+  failed_operations: number;
+  sum_processing_time_ms: number;
+  file_type_breakdown: Record<string, number>;
+}
+
+export interface AggregateDailyInput {
+  /** Fecha en zona America/Lima (YYYY-MM-DD) a agregar.
+   * Si no viene, se agrega "ayer" en Lima. */
+  usage_date?: string;
+}
+
+export interface AggregateDailyOutput {
+  usage_date_utc: string; // inicio de día UTC correspondiente a la fecha Lima agregada
+  tenants_processed: number;
+  docs_upserted: number;
+}
+
+export type AdminUser = { collection: 'users'; id: string; role: 'admin'; email?: string };
+export type RegularUser = { collection: 'users'; id: string; role: 'user'; email?: string };
+export type TenantAuth = { collection: 'tenants'; id: string; state?: boolean };

@@ -146,5 +146,40 @@ export interface AggregateDailyOutput {
 }
 
 export type AdminUser = { collection: 'users'; id: string; role: 'admin'; email?: string };
+
 export type RegularUser = { collection: 'users'; id: string; role: 'user'; email?: string };
+
 export type TenantAuth = { collection: 'tenants'; id: string; state?: boolean };
+
+export type CpuInfo = { usagePercent: number };
+
+export type MemInfo = { usedMB: number; totalMB: number; usagePercent: number };
+
+export type DiskInfo = { readMBps?: number; writeMBps?: number; usedPercent?: number };
+
+export type NetInfo = { rxKBps?: number; txKBps?: number };
+
+export type SystemSnapshot = {
+  at: string;
+  cpu: CpuInfo;
+  memory: MemInfo;
+  disk: DiskInfo;
+  network: NetInfo;
+};
+
+export interface SystemMetricsProvider {
+  snapshot(): Promise<SystemSnapshot>;
+}
+
+export type OpType = 'encrypt' | 'decrypt';
+export type OpsSnapshot = {
+  windowSeconds: number;
+  encryptCount: number;
+  decryptCount: number;
+  totalCount: number;
+  at: string;
+};
+export interface OpsCounter {
+  record(type: OpType): Promise<void> | void;
+  snapshot(windowSeconds?: number): Promise<OpsSnapshot>;
+}

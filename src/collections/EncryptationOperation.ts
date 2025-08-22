@@ -4,6 +4,8 @@ import { decryptSingleStreamHandlerV2 } from '@/handlers/v2/decryptHandler';
 import { encryptSingleStreamHandlerV2 } from '@/handlers/v2/encryptHandler';
 import { massiveEncryptionHandlerV2 } from '@/handlers/v2/massiveEncryptionHandler';
 import { onlyAdmins } from '@/shared/http/auth';
+import { MetricsService } from '@/metrics/MetricsService';
+import { response } from '@/shared/http/response';
 
 export const EncryptionOperations: CollectionConfig = {
   slug: 'encryption_operations',
@@ -128,6 +130,13 @@ export const EncryptionOperations: CollectionConfig = {
 
         data!.operation_title = `${op.toUpperCase()} • ${files} file(s) • ${when} • ${tenant}`;
       }
+    ],
+    afterChange: [
+      async ({ operation, doc }) => {
+        if (operation !== 'create') return;
+        const t = doc?.operation_type === 'decrypt' ? 'decrypt' : 'encrypt';
+        await MetricsService.get().recordOperation(t);
+      }
     ]
   },
   endpoints: [
@@ -145,7 +154,51 @@ export const EncryptionOperations: CollectionConfig = {
       path: '/v2/encrypt', // =>  /api/encryption_operations/v2/massive-encrypt
       method: 'post',
       handler: encryptSingleStreamHandlerV2
+    },
+    {
+      path: '/metrics/ops/now',
+      method: 'get',
+      handler: async (req): Promise<Response> => {
+        //if (!requireAdmin(req, res)) return;
+        return response(200, MetricsService.get().opsSnapshot(), 'OK');
+      }
+    },
+    {
+      path: '/metrics/system/now',
+      method: 'get',
+      handler: async (req): Promise<Response> => {
+        //if (!requireAdmin(req, res)) return;
+        const snap = await MetricsService.get().systemSnapshot();
+        return response(200, snap, 'OK');
+      }
     }
+    // {
+    //   // (opcional) stream SSE cada 1s con ambas métricas
+    //   path: '/metrics/stream',
+    //   method: 'get',
+    //   handler: async (req): Promise<Response> => {
+    //     //if (!requireAdmin(req)) return;
+
+    //     return response(200, null, 'OK');
+    //   },
+    //   const send = async () => {
+    //     const body = {
+    //       ops: MetricsService.get().opsSnapshot(),
+    //       sys: await MetricsService.get().systemSnapshot()
+    //       };
+    //     response(200, body, 'OK', {
+    //       headers: {
+    //         'Content-Type': 'text/event-stream',
+    //         'Cache-Control': 'no-cache, no-transform',
+    //         'Connection': 'keep-alive'
+    //       }
+    //     });
+
+    //     const timer = setInterval(send, 1000);
+    //     req.on('close', () => clearInterval(timer));
+    //     await send(); // primer snapshot inmediato
+    //   }
+    // }
   ],
   indexes: [
     // 1) Ventana temporal + orden/paginado estable (match con sort del job)
